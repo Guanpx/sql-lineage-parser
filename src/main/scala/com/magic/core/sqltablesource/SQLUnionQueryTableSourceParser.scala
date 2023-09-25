@@ -6,7 +6,7 @@ import com.magic.sqllineageparser.model.{TableNode, TreeNode}
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * <p>
+ * Union类型
  *
  * @author Guan Peixiang (guanpeixiang@juzishuke.com)
  * @date 2023/9/12
