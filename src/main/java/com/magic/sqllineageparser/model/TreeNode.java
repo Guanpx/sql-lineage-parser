@@ -17,13 +17,17 @@ public class TreeNode<T> {
 
     T value;
 
+    // root 根节点
     TreeNode<T> parent;
 
-    List<TreeNode<T>> childList;
+    // leaves leaf复数
+    List<TreeNode<T>> children;
 
     int height;
 
     int subtreeSize;
+    // 当前节点 and 所有子节点 todo
+    private List<TreeNode<T>> elementsIndex;
 
     public TreeNode() {
     }
@@ -49,26 +53,26 @@ public class TreeNode<T> {
     }
 
     public void initChildList() {
-        if (childList == null) {
-            childList = new ArrayList<>();
+        if (children == null) {
+            children = new ArrayList<>();
         }
     }
 
     public boolean isLeaf() {
-        if (childList == null) {
+        if (children == null) {
             return true;
         }
-        return childList.size() == 0;
+        return children.size() == 0;
     }
 
     public boolean isOneChildAndLeaf() {
-        return childList != null && childList.size() == 1 && childList.get(0).isLeaf();
+        return children != null && children.size() == 1 && children.get(0).isLeaf();
     }
 
     public void addChild(TreeNode<T> childNode) {
         initChildList();
         childNode.parent = this;
-        childList.add(childNode);
+        children.add(childNode);
         childNode.height = Optional.ofNullable(childNode.parent)
                 .map(node -> node.height + 1)
                 .orElse(0);
@@ -78,8 +82,8 @@ public class TreeNode<T> {
                 .orElse(0L));
     }
 
-    public List<TreeNode<T>> getChildList() {
-        return childList;
+    public List<TreeNode<T>> getChildren() {
+        return children;
     }
 
     public AtomicLong getId() {

@@ -18,7 +18,7 @@ import java.util.List;
 public class ColumnNode {
 
     /**
-     * 列所属的表，考虑
+     * 列所属的表 todo
      */
     private TableNode owner;
     /**

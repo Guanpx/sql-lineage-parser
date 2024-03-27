@@ -20,7 +20,7 @@ public class TableNode {
     /**
      * schema
      */
-    private String schemaName;
+    private String schema;
     /**
      * 表名
      */
