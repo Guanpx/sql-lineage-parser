@@ -56,7 +56,8 @@ object SqlLineageParser {
     println("解析 select sqlSelectQueryBlock")
 
     val selectList: util.List[SQLSelectItem] = sqlSelectQueryBlock.getSelectList
-    println(selectList.size())
+    println(s"select 语句大小：${selectList.size()}")
+
     for (item <- selectList.asScala) {
       val expr: SQLExpr = item.getExpr
       val exprString = item.getExpr.toString
@@ -65,8 +66,10 @@ object SqlLineageParser {
       val itemName: String = item.toString
 
       val getColumn = if (StringUtils.isEmpty(alias)) itemName else alias
+      println(s"原字段: $itemName")
+      println(s"别名字段: $getColumn")
+      // 解析sql语句
       parserSqlExpr(expr)
-
     }
 
     val table: SQLTableSource = sqlSelectQueryBlock.getFrom
@@ -100,6 +103,11 @@ object SqlLineageParser {
    */
   private def parserSqlExpr(sqlExpr: SQLExpr): Unit = {
     sqlExpr match {
+
+      // case when
+      case expr: SQLCaseExpr =>
+        parserSQLCaseExpr(expr);
+
       // 聚合
       case expr: SQLAggregateExpr =>
         parserSQLAggregateExpr(expr);
@@ -107,10 +115,6 @@ object SqlLineageParser {
       // 方法
       case expr: SQLMethodInvokeExpr =>
         parserSqlMethodInvokeExpr(expr);
-
-      // case when
-      case expr: SQLCaseExpr =>
-        parserSQLCaseExpr(expr);
 
       // 比较
       case expr: SQLBinaryOpExpr =>
@@ -167,17 +171,17 @@ object SqlLineageParser {
    * @param expr
    */
   private def parserSQLCaseExpr(expr: SQLCaseExpr): Unit = {
-    println("解析case when ....")
-    // parserSqlExpr(expr.getValueExpr)
-    val x: SQLExpr = expr.getValueExpr // todo
-    println(x)
+    println("\n\n解析case when ....")
     val lst: mutable.Buffer[SQLCaseExpr.Item] = expr.getItems.asScala
+    println(s"开始解析每个子条目...")
     for (elem <- lst) {
       println(s"item: $elem")
-      println(elem.getConditionExpr)
+      println(s"case条件：${elem.getConditionExpr}")
       parserSqlExpr(elem.getValueExpr)
     }
-    println("解析case end !\n\n\n")
+    println(s"开始解析else语句...")
+    parserSqlExpr(expr.getElseExpr)
+    println("解析case 结束 !\n\n\n")
   }
 
   /**
@@ -259,6 +263,13 @@ object SqlLineageParser {
     println("比较 BinaryOp")
     val name = expr.toString
     println(name)
+    println(expr.getLeft)
+    parserSqlExpr(expr.getLeft)
+    println(expr.getOperator)
+    println(expr.getRight)
+    parserSqlExpr(expr.getRight)
+
+
     println("比较 BinaryOp 解析完成！！！")
   }
 
@@ -272,6 +283,8 @@ object SqlLineageParser {
   private def parserSQLAggregateExpr(expr: SQLAggregateExpr): Unit = {
     println("聚合aggregate")
     val name = expr.toString
+    println(expr.computeDataType())
+
     println(name)
     println("聚合aggregate 解析完成！！！")
   }

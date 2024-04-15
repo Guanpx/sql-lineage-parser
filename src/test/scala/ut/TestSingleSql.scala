@@ -1,5 +1,8 @@
 package ut
 
+import com.alibaba.druid.DbType
+import com.alibaba.druid.sql.SQLUtils
+import com.alibaba.druid.sql.ast.SQLExpr
 import com.magic.core.parser.SqlLineageParser.parserSingleSelectSql
 
 object TestSingleSql {
@@ -274,15 +277,29 @@ object TestSingleSql {
         |  WHERE dt >= '2023-01-01'
         |) t2 ON t1.id = t2.id;
         |""".stripMargin
+
     val caseSql =
       """
-        |select case when a=1 then 11111
-        |when a =2 then 2222
-        | else -9999
-        |end AS ttt from table_aaa;
+        |	SELECT CASE
+        |			WHEN a = 1 THEN 11111
+        |			WHEN a = 2 THEN 22222
+        |			WHEN a = 3 THEN a <> b
+        |			ELSE -9999
+        |		END AS ttt
+        |	FROM table_aaa
         |""".stripMargin
+
+
+
+
+
     val sql = caseSql
-    print(sql)
+
+
+
+
+    val expr: SQLExpr = SQLUtils.toSQLExpr(sql, DbType.hive)
+    println(expr)
     parserSingleSelectSql(sql)
   }
 
