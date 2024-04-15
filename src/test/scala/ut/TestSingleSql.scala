@@ -274,8 +274,14 @@ object TestSingleSql {
         |  WHERE dt >= '2023-01-01'
         |) t2 ON t1.id = t2.id;
         |""".stripMargin
-
-    val sql = leftJoinSql
+    val caseSql =
+      """
+        |select case when a=1 then 11111
+        |when a =2 then 2222
+        | else -9999
+        |end AS ttt from table_aaa;
+        |""".stripMargin
+    val sql = caseSql
     print(sql)
     parserSingleSelectSql(sql)
   }
