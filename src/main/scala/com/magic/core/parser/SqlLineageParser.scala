@@ -151,7 +151,8 @@ object SqlLineageParser {
   /**
    * 表达式
    *
-   * ？？？
+   * select table.column from talbe_name table
+   *
    * @param expr
    */
   private def parserSQLPropertyExpr(expr: SQLPropertyExpr): Unit = {
@@ -160,7 +161,7 @@ object SqlLineageParser {
     println(name)
     println(expr.getOwner)
     println(expr.getName)
-    println("表达式 propertyExpr BinaryOp 解析完成！！！")
+    println("表达式 propertyExpr 解析完成！！！")
   }
 
 
@@ -187,13 +188,14 @@ object SqlLineageParser {
   /**
    * SQL Method
    *
-   * select max(xxx) from table
+   * select func(xxx) from table
    * @param expr
    */
   private def parserSqlMethodInvokeExpr(expr: SQLMethodInvokeExpr): Unit = {
     println("方法 visitSQLMethodInvoke")
     val name = expr.getMethodName
     expr.getArguments.asScala.foreach(argsExpr => {
+      println(argsExpr)
       parserSqlExpr(argsExpr)
     })
     println(name)
