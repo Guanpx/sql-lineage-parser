@@ -290,15 +290,11 @@ object TestSingleSql {
         |""".stripMargin
 
 
-
-
-
     val sql = caseSql
 
 
-
-
     val expr: SQLExpr = SQLUtils.toSQLExpr(sql, DbType.hive)
+    //    val expr: SQLExpr = SQLUtils.toSQLExpr(sql, DbType.clickhouse)
     println(expr)
     parserSingleSelectSql(sql)
   }
