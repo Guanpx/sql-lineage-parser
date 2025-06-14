@@ -286,8 +286,10 @@ object SqlLineageParser {
     println("聚合aggregate")
     val name = expr.toString
     println(expr.computeDataType())
+    println(expr.getMethodName)
+    println()
+    expr.getArguments.forEach(x=> {parserSqlExpr(x)})
 
-    println(name)
     println("聚合aggregate 解析完成！！！")
   }
 
