@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * <p>
  *
- * @author Guan Peixiang (guanpeixiang@juzishuke.com)
+ * @author Guan Peixiang
  * @date 2023/9/12
  */
 public class TreeNode<T> {

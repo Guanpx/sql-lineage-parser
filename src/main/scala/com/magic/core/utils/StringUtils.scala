@@ -3,7 +3,7 @@ package com.magic.core.utils
 /**
  * <p>
  *
- * @author Guan Peixiang (guanpeixiang@juzishuke.com)
+ * @author Guan Peixiang
  * @date 2023/12/19
  */
 object StringUtils {

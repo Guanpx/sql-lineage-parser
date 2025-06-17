@@ -14,7 +14,7 @@ import scala.collection.mutable
 /**
  * sql血缘解析入口函数
  *
- * @author Guan Peixiang (guanpeixiang@juzishuke.com)
+ * @author Guan Peixiang
  * @date 2023/12/19
  */
 object SqlLineageParser {

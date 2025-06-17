@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Union类型
  *
- * @author Guan Peixiang (guanpeixiang@juzishuke.com)
+ * @author Guan Peixiang
  * @date 2023/9/12
  */
 object SQLUnionQueryTableSourceParser extends BaseTableSourceParser {
