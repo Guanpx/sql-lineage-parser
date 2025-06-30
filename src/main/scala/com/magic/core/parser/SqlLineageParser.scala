@@ -5,7 +5,9 @@ import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.sql.ast.SQLExpr
 import com.alibaba.druid.sql.ast.expr._
 import com.alibaba.druid.sql.ast.statement._
+import com.alibaba.druid.sql.dialect.hive.stmt.HiveCreateTableStatement
 import com.magic.core.utils.StringUtils
+import com.magic.sqllineageparser.model.{ColumnNode, TreeNode}
 
 import java.util
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -26,25 +28,32 @@ object SqlLineageParser {
    * 2.union  类型 todo
    * @param sql
    */
-  def parserSingleSelectSql(sql: String): Unit = {
+  def parserSingleSelectSql(sql: String): TreeNode[ColumnNode]  = {
     if (StringUtils.isEmpty(sql)) {
-      return
+      return null
     }
-
+    // TODO
+    // SQLCreateTableStatement
     val stmt: SQLSelectStatement = SQLUtils.parseSingleStatement(sql, DbType.mysql).asInstanceOf[SQLSelectStatement]
 
     val sqlSelectQuery: SQLSelectQuery = stmt.getSelect.getQuery
+    val root: TreeNode[ColumnNode] = new TreeNode[ColumnNode]
 
     // select语句
     sqlSelectQuery match {
       case sqlSelectQuery: SQLSelectQueryBlock => {
-        parserSelectStmt(sqlSelectQuery)
+        parserSelectStmt(sqlSelectQuery, root)
+        println(root.getChildren.size())
+        return root
       }
       // union
       case sqlSelectQuery: SQLUnionQuery => {
         println(s"${sqlSelectQuery.getClass}类型不支持!!!")
+        return null
       }
       case _ => println(s"${sqlSelectQuery.getClass}类型不支持!!!")
+        return null
+
     }
   }
 
@@ -52,7 +61,7 @@ object SqlLineageParser {
    * 解析select语句 非union
    * @param sqlSelectQueryBlock
    */
-  private def parserSelectStmt(sqlSelectQueryBlock: SQLSelectQueryBlock): Unit = {
+  private def parserSelectStmt(sqlSelectQueryBlock: SQLSelectQueryBlock, root: TreeNode[ColumnNode]): Unit = {
     println("解析 select sqlSelectQueryBlock")
 
     val selectList: util.List[SQLSelectItem] = sqlSelectQueryBlock.getSelectList
@@ -64,7 +73,12 @@ object SqlLineageParser {
       val hint = item.getExpr.getHint
       val alias: String = item.getAlias
       val itemName: String = item.toString
-
+      val child = new TreeNode[ColumnNode]()
+      val node = new ColumnNode()
+      node.setName(itemName)
+      node.setAlias(alias)
+      child.setValue(node)
+      root.addChild(child)
       val getColumn = if (StringUtils.isEmpty(alias)) itemName else alias
       println(s"原字段: $itemName")
       println(s"别名字段: $getColumn")

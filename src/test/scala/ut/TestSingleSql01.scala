@@ -28,8 +28,9 @@ object TestSingleSql01 {
     val joinSql02 = "sqls/sqlJoin/sqlJoin02.sql"
     val unionSql01 = "sqls/sqlUnion/sqlUnion01.sql"
     val caseSql02 = "sqls/sqlCase/sqlCase02.sql"
+    val caseSql03 = "sqls/sqlCase/sqlCase03.sql"
 
-    val sql = getSql(caseSql02)
+    val sql = getSql(caseSql03)
 
     val expr: SQLExpr = SQLUtils.toSQLExpr(sql, DbType.hive)
     println(expr)
