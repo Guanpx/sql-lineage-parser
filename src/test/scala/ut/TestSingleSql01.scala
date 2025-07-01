@@ -30,7 +30,7 @@ object TestSingleSql01 {
     val caseSql02 = "sqls/sqlCase/sqlCase02.sql"
     val caseSql03 = "sqls/sqlCase/sqlCase03.sql"
 
-    val sql = getSql(caseSql03)
+    val sql = getSql(caseSql02)
 
     val expr: SQLExpr = SQLUtils.toSQLExpr(sql, DbType.hive)
     println(expr)

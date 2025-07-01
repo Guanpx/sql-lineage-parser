@@ -66,7 +66,8 @@ object SqlLineageParser {
 
     val selectList: util.List[SQLSelectItem] = sqlSelectQueryBlock.getSelectList
     println(s"select 语句大小：${selectList.size()}")
-
+    println(s"select 语句FROM ：${sqlSelectQueryBlock}")
+    println(sqlSelectQueryBlock.getFrom.toString)
     for (item <- selectList.asScala) {
       val expr: SQLExpr = item.getExpr
       val exprString = item.getExpr.toString
