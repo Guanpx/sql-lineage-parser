@@ -34,7 +34,16 @@ object SqlLineageParser {
     }
     // TODO
     // SQLCreateTableStatement
-    val stmt: SQLSelectStatement = SQLUtils.parseSingleStatement(sql, DbType.mysql).asInstanceOf[SQLSelectStatement]
+    // SQLAlterTableStatement
+//    val stmt2: SQLAlterTableStatement = SQLUtils.parseSingleStatement(sql, DbType.hive).asInstanceOf[SQLAlterTableStatement]
+//    val lst: mutable.Buffer[SQLAlterTableItem] = stmt2.getItems.asScala
+//    for (elem <- lst) {
+//      val ee = elem.asInstanceOf[SQLAlterTableAddColumn]
+//      println(ee)
+//      println(ee.getParent.asInstanceOf[SQLAlterTableStatement].getTableSource)
+//    }
+
+    val stmt: SQLSelectStatement = SQLUtils.parseSingleStatement(sql, DbType.hive).asInstanceOf[SQLSelectStatement]
 
     val sqlSelectQuery: SQLSelectQuery = stmt.getSelect.getQuery
     val root: TreeNode[ColumnNode] = new TreeNode[ColumnNode]
