@@ -8,19 +8,15 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <name>sql-lineage-parser</name>
-    <description>sql-lineage-parser</description>
+    <description>SQL Lineage Parser - 基于 Alibaba Druid 的 SQL 血缘解析工具</description>
 
     <properties>
-        <java.version>1.8</java.version>
-        <scope.value>provided</scope.value>
-        <!--  <scope.value>compile</scope.value>-->
-
-        <scala.version>2.12.17</scala.version>
+        <java.version>17</java.version>
         <druid.version>1.2.20</druid.version>
-        <scala.binary.version>2.12</scala.binary.version>
         <encoding>UTF-8</encoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -28,7 +24,6 @@
             <groupId>com.alibaba</groupId>
             <artifactId>druid</artifactId>
             <version>${druid.version}</version>
-<!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -36,68 +31,34 @@
             <version>1.18.28</version>
             <optional>true</optional>
         </dependency>
+        <!-- JUnit 5 -->
         <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-            <scope>${scope.value}}</scope>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>${artifactId}</finalName>
-        <pluginManagement>
-            <plugins>
-                <!-- 编译scala的插件 -->
-                <plugin>
-                    <groupId>net.alchim31.maven</groupId>
-                    <artifactId>scala-maven-plugin</artifactId>
-                    <version>4.8.1</version>
-                </plugin>
-                <!-- 编译java的插件 -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.10.1</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+        <finalName>${project.artifactId}</finalName>
         <plugins>
+            <!-- 编译Java的插件 -->
             <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <version>4.8.1</version>
-                <executions>
-                    <execution>
-                        <id>scala-compile-first</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                    <!--                    <execution>-->
-                    <!--                        <id>scala-test-compile</id>-->
-                    <!--                        <phase>process-test-resources</phase>-->
-                    <!--                        <goals>-->
-                    <!--                            <goal>testCompile</goal>-->
-                    <!--                        </goals>-->
-                    <!--                    </execution>-->
-                </executions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                </configuration>
             </plugin>
-            <!--            <plugin>-->
-            <!--                <groupId>org.apache.maven.plugins</groupId>-->
-            <!--                <artifactId>maven-compiler-plugin</artifactId>-->
-            <!--                <version>3.10.1</version>-->
-            <!--                <executions>-->
-            <!--                    <execution>-->
-            <!--                        <phase>compile</phase>-->
-            <!--                        <goals>-->
-            <!--                            <goal>compile</goal>-->
-            <!--                        </goals>-->
-            <!--                    </execution>-->
-            <!--                </executions>-->
-            <!--            </plugin>-->
+            <!-- 测试插件 - 支持JUnit 5 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+            </plugin>
             <!-- 打jar插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -137,7 +98,6 @@
     </build>
 
     <repositories>
-
         <repository>
             <id>alimaven</id>
             <name>aliyun maven</name>
@@ -158,7 +118,6 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
-
     </repositories>
 
 </project>
