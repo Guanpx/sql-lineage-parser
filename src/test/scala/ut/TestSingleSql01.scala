@@ -30,8 +30,9 @@ object TestSingleSql01 {
     val caseSql02 = "sqls/sqlCase/sqlCase02.sql"
     val caseSql03 = "sqls/sqlCase/sqlCase03.sql"
     val caseAlter01 = "sqls/sqlAlter/sqlAlter01.sql"
+    val sqlFunction01 = "sqls/sqlFunction/sqlMaxIfNvlFunc03.sql"
 
-    val sql = getSql(caseAlter01)
+    val sql = getSql(sqlFunction01)
 
 //    val expr: SQLExpr = SQLUtils.toSQLExpr(sql, DbType.hive)
 //    println(expr)

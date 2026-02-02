@@ -1,1 +1,1 @@
-alter table hive_catalog.fce_stock.dest_billing_detail_flow_fee ADD COLUMN (settle_factor_name string   COMMENT  '结算费项' )
+alter table fce_stock.dest_test_2 ADD COLUMNS (first_code string   COMMENT  '首code' );
