@@ -6,22 +6,25 @@ import com.magic.sqllineageparser.model.TableNode;
 import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * Union查询表源解析器
+ * <p>
  * 处理 SQLUnionQueryTableSource 类型的表源
  *
  * @author Guan Peixiang
- * @date 2023/9/12
+ * @since 2023/9/12
  */
-public class SQLUnionQueryTableSourceParser implements BaseTableSourceParser {
+public final class SqlUnionQueryTableSourceParser implements BaseTableSourceParser {
 
-    private static final SQLUnionQueryTableSourceParser INSTANCE = new SQLUnionQueryTableSourceParser();
+    private static final Logger LOGGER = Logger.getLogger(SqlUnionQueryTableSourceParser.class.getName());
+    private static final SqlUnionQueryTableSourceParser INSTANCE = new SqlUnionQueryTableSourceParser();
 
-    private SQLUnionQueryTableSourceParser() {
+    private SqlUnionQueryTableSourceParser() {
     }
 
-    public static SQLUnionQueryTableSourceParser getInstance() {
+    public static SqlUnionQueryTableSourceParser getInstance() {
         return INSTANCE;
     }
 
@@ -31,10 +34,10 @@ public class SQLUnionQueryTableSourceParser implements BaseTableSourceParser {
             return;
         }
 
-        // 获取Union查询
         var unionQuery = unionQueryTableSource.getUnion();
-        System.out.println("Union查询: " + unionQuery);
+        var alias = unionQueryTableSource.getAlias();
 
-        // TODO: 实现Union查询的解析
+        LOGGER.fine(() -> "UNION 查询别名: " + alias);
+        LOGGER.fine(() -> "UNION 查询: " + unionQuery);
     }
 }

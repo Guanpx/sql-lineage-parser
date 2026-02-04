@@ -4,141 +4,219 @@
 
 ## 项目简介
 
-`sql-lineage-parser` 能够解析 SQL 语句（当前主要支持 Hive SQL），提取出字段级别的血缘关系，追踪数据从源表到目标表的流转路径。项目采用 Scala + Java 混合编程，基于 Druid SQL Parser 进行 AST 解析。
+`sql-lineage-parser` 能够解析 SQL 语句（当前主要支持 Hive SQL），提取出字段级别的血缘关系，追踪数据从源表到目标表的流转路径。项目基于 Druid SQL Parser 进行 AST 解析。
+
+### 核心特性
+
+- **字段级血缘追踪**: 精确到列的血缘关系解析
+- **复杂表达式支持**: CASE WHEN、聚合函数、嵌套函数等
+- **多种表源解析**: 普通表、JOIN、子查询、UNION、CTE
+- **树形结构输出**: 直观的血缘树结构，便于遍历和分析
+- **高度可扩展**: 模块化设计，易于扩展新语法支持
 
 ## 技术栈
 
-- **语言**: Scala 2.12 + Java 8
-- **SQL 解析引擎**: Alibaba Druid 1.2.20
-- **构建工具**: Maven
-- **辅助工具**: Lombok
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| Java | 17+ | 运行环境 |
+| Alibaba Druid | 1.2.20 | SQL 解析引擎 |
+| Maven | 3.x | 构建工具 |
+| JUnit 5 | 5.10.0 | 测试框架 |
+| Lombok | 1.18.28 | 代码简化 |
+
+## 快速开始
+
+### 环境要求
+
+- JDK 17+
+- Maven 3.x
+
+### 构建
+
+```bash
+# 编译打包
+mvn clean package
+
+# 运行测试
+mvn test
+```
+
+### 基础使用
+
+```java
+import com.magic.core.parser.SqlLineageParser;
+import com.magic.sqllineageparser.model.ColumnNode;
+import com.magic.sqllineageparser.model.TreeNode;
+
+public class Example {
+    public static void main(String[] args) {
+        String sql = """
+            SELECT
+                a.id,
+                b.name,
+                SUM(a.amount) as total
+            FROM orders a
+            JOIN users b ON a.user_id = b.id
+            GROUP BY a.id, b.name
+            """;
+
+        TreeNode<ColumnNode> lineageTree = SqlLineageParser.parserSingleSelectSql(sql);
+
+        // 遍历血缘树
+        lineageTree.getChildren().forEach(child -> {
+            ColumnNode column = child.getValue();
+            System.out.println("输出列: " + column.getAlias());
+            System.out.println("来源: " + column.getSourceColumns());
+            System.out.println("---");
+        });
+    }
+}
+```
+
+### 血缘树结构说明
+
+```
+ROOT (虚拟根节点)
+├── Column: id
+│   └── Source: orders.id
+├── Column: name
+│   └── Source: users.name
+└── Column: total (SUM)
+    └── Source: orders.amount
+```
 
 ## 项目结构
 
 ```
 sql-lineage-parser/
-├── src/
-│   ├── main/
-│   │   ├── java/com/magic/sqllineageparser/model/
-│   │   │   ├── TreeNode.java          # 通用树结构节点
-│   │   │   ├── TableNode.java         # 表节点模型
-│   │   │   └── ColumnNode.java        # 列节点模型
-│   │   └── scala/com/magic/core/
-│   │       ├── parser/
-│   │       │   ├── SqlLineageParser.scala       # 血缘解析核心入口
-│   │       │   └── sql/
-│   │       │       ├── table/                   # 表源解析器
-│   │       │       │   ├── BaseTableSourceParser.scala
-│   │       │       │   ├── SQLExprTableSourceParser.java
-│   │       │       │   ├── SQLJoinTableSourceParser.java
-│   │       │       │   ├── SQLSubqueryTableSourceParser.java
-│   │       │       │   ├── SQLUnionQueryTableSourceParser.scala
-│   │       │       │   └── SQLWithSubqueryTableSourceParser.scala
-│   │       │       └── expr/                    # 表达式解析器
-│   │       │           ├── BaseSqlExprParser.scala
-│   │       │           └── SQLMethodInvokeExprParser.scala
-│   │       └── utils/
-│   │           └── StringUtils.scala
-│   └── test/
-│       ├── java/ut/TestAll.java
-│       └── scala/ut/TestSingleSql01.scala
-├── sqls/                              # SQL 测试用例
-│   ├── sqlAlter/                      # ALTER 语句
-│   ├── sqlCase/                       # CASE WHEN 语句
-│   ├── sqlFunction/                   # 函数类语句
-│   ├── sqlJoin/                       # JOIN 语句
-│   ├── sqlProd/                       # 生产级复杂 SQL
-│   ├── sqlSelect/                     # SELECT 语句
-│   └── sqlUnion/                      # UNION 语句
-├── pom.xml
-└── CheckStyle.xml
+├── src/main/java/com/magic/
+│   ├── core/
+│   │   ├── parser/
+│   │   │   ├── SqlLineageParser.java           # 血缘解析核心入口
+│   │   │   └── sql/
+│   │   │       ├── table/                      # 表源解析器
+│   │   │       │   ├── BaseTableSourceParser.java
+│   │   │       │   ├── SQLExprTableSourceParser.java
+│   │   │       │   ├── SQLJoinTableSourceParser.java
+│   │   │       │   ├── SQLSubqueryTableSourceParser.java
+│   │   │       │   ├── SQLUnionQueryTableSourceParser.java
+│   │   │       │   └── SQLWithSubqueryTableSourceParser.java
+│   │   │       └── expr/                       # 表达式解析器
+│   │   │           ├── BaseSqlExprParser.java
+│   │   │           └── SQLMethodInvokeExprParser.java
+│   │   └── utils/
+│   │       └── StringUtils.java
+│   └── sqllineageparser/model/
+│       ├── TreeNode.java                       # 通用树结构
+│       ├── TableNode.java                      # 表节点模型
+│       └── ColumnNode.java                     # 列节点模型
+├── src/test/                                   # 测试代码
+├── sqls/                                       # SQL 测试用例库
+│   ├── sqlCase/                                # CASE WHEN 语句
+│   ├── sqlFunction/                            # 函数类语句
+│   ├── sqlJoin/                                # JOIN 语句
+│   ├── sqlProd/                                # 生产级复杂 SQL
+│   └── sqlUnion/                               # UNION 语句
+├── RELEASE.md                                  # 版本规划文档
+└── pom.xml
 ```
 
 ## 核心模块
 
 ### 数据模型
 
-- **TreeNode**: 通用泛型树结构，支持父子关系、层高计算、子树大小统计等操作
-- **TableNode**: 表节点，包含 schema、表名、别名、是否虚拟表、字段列表等信息
-- **ColumnNode**: 列节点，包含列名、别名、来源列、所属表、表达式、是否常量等信息
+| 模型 | 说明 |
+|------|------|
+| **TreeNode\<T>** | 通用泛型树结构，支持父子关系、层高计算、子树遍历 |
+| **TableNode** | 表节点：schema、表名、别名、是否虚拟表、字段列表 |
+| **ColumnNode** | 列节点：列名、别名、来源列、表达式、是否常量 |
 
-### 解析引擎
+### 支持的表达式类型
 
-- **SqlLineageParser**: 解析入口，负责将 SQL 字符串解析为血缘树。支持解析以下 SQL 表达式类型：
-  - `SQLPropertyExpr` - 表.列 表达式
-  - `SQLCaseExpr` - CASE WHEN 表达式
-  - `SQLAggregateExpr` - 聚合函数（SUM、COUNT 等）
-  - `SQLMethodInvokeExpr` - 函数调用
-  - `SQLBinaryOpExpr` - 二元运算/比较表达式
-  - `SQLIdentifierExpr` - 列标识符
-  - `SQLNumberExpr` / `SQLIntegerExpr` - 数值常量
-  - `SQLCharExpr` - 字符常量
+| 表达式 | 示例 | 状态 |
+|--------|------|------|
+| 列引用 | `t.id`, `name` | ✅ |
+| CASE WHEN | `CASE WHEN a=1 THEN 'x' ELSE 'y' END` | ✅ |
+| 聚合函数 | `SUM(amount)`, `COUNT(*)`, `MAX(score)` | ✅ |
+| 函数调用 | `CONCAT(a, b)`, `NVL(x, 0)`, `IF(...)` | ✅ |
+| 二元运算 | `a + b`, `a > b`, `a AND b` | ✅ |
+| 常量 | `'hello'`, `123`, `3.14` | ✅ |
+| CAST | `CAST(x AS STRING)` | ✅ |
 
-- **表源解析器（TableSourceParser）**: 处理不同的表来源类型：
-  - 普通表（`SQLExprTableSource`）
-  - JOIN 表（`SQLJoinTableSource`）
-  - 子查询（`SQLSubqueryTableSource`）
-  - UNION 查询（`SQLUnionQueryTableSource`）
-  - WITH 子查询（`SQLWithSubqueryTableSource`）
+### 支持的表源类型
 
-## 快速开始
-
-### 环境要求
-
-- JDK 1.8+
-- Maven 3.x
-- Scala 2.12
-
-### 构建
-
-```bash
-mvn clean package
-```
-
-### 使用示例
-
-**Scala 调用：**
-
-```scala
-import com.magic.core.parser.SqlLineageParser
-
-val sql = "SELECT a.id, b.name FROM table_a a JOIN table_b b ON a.id = b.id"
-val lineageTree = SqlLineageParser.parserSingleSelectSql(sql)
-```
-
-**Java 调用：**
-
-```java
-import com.alibaba.druid.sql.parser.SQLParserUtils;
-import com.alibaba.druid.sql.parser.SQLStatementParser;
-import com.alibaba.druid.sql.ast.SQLStatement;
-import com.alibaba.druid.sql.visitor.SchemaStatVisitor;
-
-String sql = "SELECT a.id, b.name FROM table_a a JOIN table_b b ON a.id = b.id";
-SQLStatementParser parser = SQLParserUtils.createSQLStatementParser(sql, "mysql");
-SQLStatement statement = parser.parseStatement();
-
-SchemaStatVisitor visitor = new SchemaStatVisitor();
-statement.accept(visitor);
-```
+| 表源 | 示例 | 状态 |
+|------|------|------|
+| 普通表 | `FROM users u` | ✅ |
+| JOIN | `LEFT JOIN orders o ON ...` | ✅ |
+| 子查询 | `FROM (SELECT ...) t` | ✅ |
+| UNION | `SELECT ... UNION SELECT ...` | 🚧 |
+| CTE | `WITH t AS (...) SELECT ...` | 🚧 |
 
 ## 支持的 SQL 类型
 
-| 类型 | 状态 |
-|------|------|
-| 单表 SELECT | 已支持 |
-| JOIN 查询 | 已支持 |
-| 子查询 | 已支持 |
-| CASE WHEN | 已支持 |
-| 聚合函数 | 已支持 |
-| 内置函数 | 已支持 |
-| UNION 查询 | 开发中 |
-| ALTER 语句 | 开发中 |
-| CREATE 语句 | 计划中 |
+| 类型 | 状态 | 说明 |
+|------|------|------|
+| 单表 SELECT | ✅ 已支持 | 完整支持 |
+| JOIN 查询 | ✅ 已支持 | LEFT/RIGHT/INNER/FULL JOIN |
+| 子查询 | ✅ 已支持 | 派生表、标量子查询 |
+| CASE WHEN | ✅ 已支持 | 简单和搜索型 CASE |
+| 聚合函数 | ✅ 已支持 | SUM/COUNT/AVG/MAX/MIN |
+| 内置函数 | ✅ 已支持 | IF/NVL/CONCAT/SUBSTR 等 |
+| UNION 查询 | 🚧 开发中 | 框架已建立 |
+| CTE (WITH) | 🚧 开发中 | 框架已建立 |
+| INSERT 语句 | 📋 计划中 | 目标表血缘 |
+| CREATE 语句 | 📋 计划中 | DDL 支持 |
+
+## 版本规划
+
+详见 [RELEASE.md](./RELEASE.md)
+
+| 版本 | 目标 | 状态 |
+|------|------|------|
+| v0.1.0 | 基础 SELECT 解析 | ✅ 当前 |
+| v0.2.0 | UNION/CTE/窗口函数 | 📋 计划中 |
+| v0.3.0 | INSERT/CTAS 支持 | 📋 计划中 |
+| v0.4.0 | DDL 支持 | 📋 计划中 |
+| v0.5.0 | 血缘输出增强 | 📋 计划中 |
+| v1.0.0 | 生产就绪版本 | 📋 计划中 |
 
 ## 开发状态
 
-项目处于早期开发阶段，部分表源解析器和表达式解析器仍在完善中。
+项目处于早期开发阶段。当前已具备：
+
+- ✅ 完整的核心解析框架
+- ✅ 50+ 单元测试用例
+- ✅ 生产级复杂 SQL 验证
+- ✅ 模块化可扩展架构
+
+待完善：
+
+- UNION 和 CTE 完整实现
+- INSERT/DDL 语句支持
+- 多 SQL 方言支持
+- REST API / CLI 工具
+
+## 调试工具
+
+项目提供调试工具类，便于开发调试：
+
+```java
+// 位于 src/test/java/com/magic/core/debug/
+SqlLineageParserDebug.main(args);   // 主解析器调试
+SqlExprParserDebug.main(args);      // 表达式解析调试
+TableSourceParserDebug.main(args);  // 表源解析调试
+```
+
+## 贡献指南
+
+欢迎贡献代码！
+
+1. Fork 本仓库
+2. 创建特性分支: `git checkout -b feature/your-feature`
+3. 编写代码和测试
+4. 确保测试通过: `mvn test`
+5. 提交 PR
 
 ## License
 

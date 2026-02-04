@@ -77,7 +77,7 @@ class TableSourceParserTest {
             SQLTableSource tableSource = queryBlock.getFrom();
 
             TreeNode<TableNode> parent = new TreeNode<>();
-            SQLExprTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, tableSource);
+            SqlExprTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, tableSource);
             // 验证解析器不抛出异常
             assertNotNull(parent);
         }
@@ -130,7 +130,7 @@ class TableSourceParserTest {
             SQLTableSource tableSource = queryBlock.getFrom();
 
             TreeNode<TableNode> parent = new TreeNode<>();
-            SQLJoinTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, tableSource);
+            SqlJoinTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, tableSource);
             // 验证解析器不抛出异常
             assertNotNull(parent);
         }
@@ -174,7 +174,7 @@ class TableSourceParserTest {
             SQLTableSource tableSource = queryBlock.getFrom();
 
             TreeNode<TableNode> parent = new TreeNode<>();
-            SQLSubqueryTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, tableSource);
+            SqlSubqueryTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, tableSource);
             // 验证解析器不抛出异常
             assertNotNull(parent);
         }
@@ -204,7 +204,7 @@ class TableSourceParserTest {
         void testSQLUnionQueryTableSourceParser() {
             TreeNode<TableNode> parent = new TreeNode<>();
             // 直接测试解析器不抛出异常
-            SQLUnionQueryTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, null);
+            SqlUnionQueryTableSourceParser.getInstance().process("hive", new AtomicInteger(0), parent, null);
             assertNotNull(parent);
         }
     }

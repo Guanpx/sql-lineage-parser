@@ -4,12 +4,12 @@ import com.alibaba.druid.DbType;
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.expr.*;
-import com.alibaba.druid.sql.ast.statement.SQLSelectItem;
-import com.alibaba.druid.sql.ast.statement.SQLSelectQueryBlock;
-import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
+import com.alibaba.druid.sql.ast.statement.*;
 import com.magic.core.util.SqlFileReader;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * SqlExprParser 调试类
@@ -32,6 +32,7 @@ public class SqlExprParserDebug {
 
     /**
      * 调试 SQLPropertyExpr (表.列 表达式)
+     * 支持解析表别名，识别 a.col1 属于表 t1
      */
     public static void debugSQLPropertyExpr() {
         DebugHelper.printTitle("调试 SQLPropertyExpr (表.列表达式)");
@@ -44,7 +45,20 @@ public class SqlExprParserDebug {
 
         for (String sql : sqls) {
             DebugHelper.printSql(sql);
-            List<SQLSelectItem> items = getSelectItems(sql);
+
+            SQLSelectQueryBlock queryBlock = getQueryBlock(sql);
+            // 构建别名 -> 表名的映射
+            Map<String, String> aliasToTableMap = buildAliasToTableMap(queryBlock.getFrom());
+
+            DebugHelper.printSubTitle("表别名映射");
+            if (aliasToTableMap.isEmpty()) {
+                System.out.println("  (无别名)");
+            } else {
+                aliasToTableMap.forEach((alias, table) ->
+                    System.out.println("  " + alias + " -> " + table));
+            }
+
+            List<SQLSelectItem> items = queryBlock.getSelectList();
             for (SQLSelectItem item : items) {
                 SQLExpr expr = item.getExpr();
                 if (expr instanceof SQLPropertyExpr propertyExpr) {
@@ -53,9 +67,58 @@ public class SqlExprParserDebug {
                     DebugHelper.printKeyValue("所有者(Owner)", propertyExpr.getOwner());
                     DebugHelper.printKeyValue("所有者名称", propertyExpr.getOwnerName());
                     DebugHelper.printKeyValue("列名(Name)", propertyExpr.getName());
+
+                    // 解析真实表名
+                    String ownerName = propertyExpr.getOwnerName();
+                    String realTableName = aliasToTableMap.getOrDefault(ownerName, ownerName);
+                    DebugHelper.printKeyValue("真实表名", realTableName);
+                    DebugHelper.printKeyValue("列归属", realTableName + "." + propertyExpr.getName());
                 }
             }
         }
+    }
+
+    /**
+     * 从 FROM 子句构建别名 -> 表名的映射
+     * 支持: 单表、逗号分隔多表、JOIN
+     */
+    private static Map<String, String> buildAliasToTableMap(SQLTableSource tableSource) {
+        Map<String, String> map = new HashMap<>();
+        collectTableAlias(tableSource, map);
+        return map;
+    }
+
+    /**
+     * 递归收集表别名
+     */
+    private static void collectTableAlias(SQLTableSource tableSource, Map<String, String> map) {
+        if (tableSource == null) {
+            return;
+        }
+
+        if (tableSource instanceof SQLExprTableSource exprTable) {
+            // 普通表: t1 a 或 db.t1 a
+            String tableName = exprTable.getExpr().toString();
+            String alias = exprTable.getAlias();
+            if (alias != null && !alias.isEmpty()) {
+                map.put(alias, tableName);
+            } else {
+                // 无别名时，表名本身也可作为引用
+                map.put(tableName, tableName);
+            }
+        } else if (tableSource instanceof SQLJoinTableSource joinTable) {
+            // JOIN 表: 递归处理左右两侧
+            // 注意: FROM t1 a, t2 b 会被解析为 SQLJoinTableSource(COMMA)
+            collectTableAlias(joinTable.getLeft(), map);
+            collectTableAlias(joinTable.getRight(), map);
+        } else if (tableSource instanceof SQLSubqueryTableSource subquery) {
+            // 子查询: (SELECT ...) AS sub
+            String alias = subquery.getAlias();
+            if (alias != null && !alias.isEmpty()) {
+                map.put(alias, "(subquery)");
+            }
+        }
+        // 其他类型如 UNION 表源暂不处理
     }
 
     /**
@@ -301,10 +364,13 @@ public class SqlExprParserDebug {
 
     // ==================== 辅助方法 ====================
 
-    private static List<SQLSelectItem> getSelectItems(String sql) {
+    private static SQLSelectQueryBlock getQueryBlock(String sql) {
         SQLSelectStatement stmt = (SQLSelectStatement) SQLUtils.parseSingleStatement(sql, DbType.hive);
-        SQLSelectQueryBlock queryBlock = (SQLSelectQueryBlock) stmt.getSelect().getQuery();
-        return queryBlock.getSelectList();
+        return (SQLSelectQueryBlock) stmt.getSelect().getQuery();
+    }
+
+    private static List<SQLSelectItem> getSelectItems(String sql) {
+        return getQueryBlock(sql).getSelectList();
     }
 
     /**

@@ -1,45 +1,49 @@
 package com.magic.sqllineageparser.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * 数据血缘解析时字段节点
+ *
+ * @author Guan Peixiang
+ * @since 2023/9/12
  */
 public class ColumnNode {
 
     /**
-     * 列所属的表 todo
+     * 列所属的表
      */
     private TableNode owner;
+
     /**
-     * 表
+     * 表名
      */
     private String tableName;
+
     /**
-     * 名称
+     * 列名
      */
     private String name;
+
     /**
-     * 别名
+     * 列别名
      */
     private String alias;
+
     /**
      * 来源列
      */
     private final List<ColumnNode> sourceColumns = new ArrayList<>();
+
     /**
      * 此节点表达式
      */
     private String expression;
 
     /**
-     * 字段所在的表树Id
+     * 字段所在的表树节点ID
      */
     private Long tableTreeNodeId;
 
@@ -51,7 +55,9 @@ public class ColumnNode {
     /**
      * 字段是否为常量
      */
-    private boolean isConstant = false;
+    private boolean constant;
+
+    // Getters and Setters
 
     public TableNode getOwner() {
         return owner;
@@ -85,8 +91,18 @@ public class ColumnNode {
         this.alias = alias;
     }
 
+    /**
+     * 获取来源列（不可变视图）
+     */
     public List<ColumnNode> getSourceColumns() {
-        return sourceColumns;
+        return Collections.unmodifiableList(sourceColumns);
+    }
+
+    /**
+     * 添加来源列
+     */
+    public void addSourceColumn(ColumnNode source) {
+        sourceColumns.add(source);
     }
 
     public String getExpression() {
@@ -114,10 +130,10 @@ public class ColumnNode {
     }
 
     public boolean isConstant() {
-        return isConstant;
+        return constant;
     }
 
     public void setConstant(boolean constant) {
-        isConstant = constant;
+        this.constant = constant;
     }
 }

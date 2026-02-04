@@ -85,6 +85,20 @@ public final class DebugHelper {
             System.out.println(indent + "│  别名: " + value.getAlias());
             System.out.println(indent + "│  表名: " + value.getTableName());
             System.out.println(indent + "│  常量: " + value.isConstant());
+
+            // 打印来源列
+            var sources = value.getSourceColumns();
+            if (!sources.isEmpty()) {
+                System.out.println(indent + "│  来源列 (" + sources.size() + "):");
+                for (var src : sources) {
+                    String srcInfo = src.isConstant()
+                            ? "[常量] " + src.getName()
+                            : (src.getTableName() != null
+                                    ? src.getTableName() + "." + src.getName()
+                                    : src.getName());
+                    System.out.println(indent + "│    → " + srcInfo);
+                }
+            }
         } else {
             System.out.println(indent + "├─ [ROOT]");
         }

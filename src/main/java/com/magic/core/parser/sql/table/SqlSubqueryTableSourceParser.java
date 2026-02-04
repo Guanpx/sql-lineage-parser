@@ -6,22 +6,25 @@ import com.magic.sqllineageparser.model.TableNode;
 import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * 子查询表源解析器
+ * <p>
  * 处理 SQLSubqueryTableSource 类型的表源
  *
  * @author Guan Peixiang
- * @date 2023/9/12
+ * @since 2023/9/12
  */
-public class SQLSubqueryTableSourceParser implements BaseTableSourceParser {
+public final class SqlSubqueryTableSourceParser implements BaseTableSourceParser {
 
-    private static final SQLSubqueryTableSourceParser INSTANCE = new SQLSubqueryTableSourceParser();
+    private static final Logger LOGGER = Logger.getLogger(SqlSubqueryTableSourceParser.class.getName());
+    private static final SqlSubqueryTableSourceParser INSTANCE = new SqlSubqueryTableSourceParser();
 
-    private SQLSubqueryTableSourceParser() {
+    private SqlSubqueryTableSourceParser() {
     }
 
-    public static SQLSubqueryTableSourceParser getInstance() {
+    public static SqlSubqueryTableSourceParser getInstance() {
         return INSTANCE;
     }
 
@@ -31,14 +34,10 @@ public class SQLSubqueryTableSourceParser implements BaseTableSourceParser {
             return;
         }
 
-        // 获取子查询
         var select = subqueryTableSource.getSelect();
-        System.out.println("子查询: " + select);
+        var alias = subqueryTableSource.getAlias();
 
-        // 获取别名
-        String alias = subqueryTableSource.getAlias();
-        System.out.println("子查询别名: " + alias);
-
-        // TODO: 实现子查询的递归解析
+        LOGGER.fine(() -> "子查询别名: " + alias);
+        LOGGER.fine(() -> "子查询内容: " + select);
     }
 }

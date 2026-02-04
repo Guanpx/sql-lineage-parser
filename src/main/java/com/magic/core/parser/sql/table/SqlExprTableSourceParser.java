@@ -1,28 +1,30 @@
 package com.magic.core.parser.sql.table;
 
-import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
 import com.magic.sqllineageparser.model.TableNode;
 import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * 普通表源解析器
+ * <p>
  * 处理 SQLExprTableSource 类型的表源
  *
  * @author Guan Peixiang
- * @date 2023/9/12
+ * @since 2023/9/12
  */
-public class SQLExprTableSourceParser implements BaseTableSourceParser {
+public final class SqlExprTableSourceParser implements BaseTableSourceParser {
 
-    private static final SQLExprTableSourceParser INSTANCE = new SQLExprTableSourceParser();
+    private static final Logger LOGGER = Logger.getLogger(SqlExprTableSourceParser.class.getName());
+    private static final SqlExprTableSourceParser INSTANCE = new SqlExprTableSourceParser();
 
-    private SQLExprTableSourceParser() {
+    private SqlExprTableSourceParser() {
     }
 
-    public static SQLExprTableSourceParser getInstance() {
+    public static SqlExprTableSourceParser getInstance() {
         return INSTANCE;
     }
 
@@ -31,7 +33,10 @@ public class SQLExprTableSourceParser implements BaseTableSourceParser {
         if (!(sqlTableSource instanceof SQLExprTableSource exprTableSource)) {
             return;
         }
-        SQLExpr expr = exprTableSource.getExpr();
-        // TODO: 实现具体的解析逻辑
+
+        var expr = exprTableSource.getExpr();
+        var alias = exprTableSource.getAlias();
+
+        LOGGER.fine(() -> "解析普通表: " + expr + (alias != null ? " AS " + alias : ""));
     }
 }

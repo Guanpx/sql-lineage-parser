@@ -7,12 +7,19 @@ import com.magic.sqllineageparser.model.TreeNode;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 表源解析器基础接口
+ * 表源解析器基础接口 (密封接口)
+ * <p>
+ * 使用 Java 17 sealed interface 限制实现类，提供更好的类型安全
  *
  * @author Guan Peixiang
- * @date 2023/9/12
+ * @since 2023/9/12
  */
-public interface BaseTableSourceParser {
+public sealed interface BaseTableSourceParser
+        permits SqlExprTableSourceParser,
+        SqlJoinTableSourceParser,
+        SqlSubqueryTableSourceParser,
+        SqlUnionQueryTableSourceParser,
+        SqlWithSubqueryTableSourceParser {
 
     /**
      * 处理表源解析
