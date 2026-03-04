@@ -13,6 +13,7 @@
 - **多种表源解析**: 普通表、JOIN、子查询、UNION、CTE
 - **树形结构输出**: 直观的血缘树结构，便于遍历和分析
 - **高度可扩展**: 模块化设计，易于扩展新语法支持
+- **图数据库持久化**: 支持将血缘关系写入 Neo4j / Nebula Graph
 
 ## 技术栈
 
@@ -96,16 +97,34 @@ sql-lineage-parser/
 │   │   │   └── sql/
 │   │   │       ├── table/                      # 表源解析器
 │   │   │       │   ├── BaseTableSourceParser.java
-│   │   │       │   ├── SQLExprTableSourceParser.java
-│   │   │       │   ├── SQLJoinTableSourceParser.java
-│   │   │       │   ├── SQLSubqueryTableSourceParser.java
-│   │   │       │   ├── SQLUnionQueryTableSourceParser.java
-│   │   │       │   └── SQLWithSubqueryTableSourceParser.java
+│   │   │       │   ├── SqlExprTableSourceParser.java
+│   │   │       │   ├── SqlJoinTableSourceParser.java
+│   │   │       │   ├── SqlSubqueryTableSourceParser.java
+│   │   │       │   ├── SqlUnionQueryTableSourceParser.java
+│   │   │       │   └── SqlWithSubqueryTableSourceParser.java
 │   │   │       └── expr/                       # 表达式解析器
 │   │   │           ├── BaseSqlExprParser.java
-│   │   │           └── SQLMethodInvokeExprParser.java
+│   │   │           ├── ExprParseContext.java   # 解析上下文
+│   │   │           ├── SqlCaseExprParser.java
+│   │   │           ├── SqlAggregateExprParser.java
+│   │   │           ├── SqlMethodInvokeExprParser.java
+│   │   │           ├── SqlBinaryOpExprParser.java
+│   │   │           ├── SqlPropertyExprParser.java
+│   │   │           ├── SqlIdentifierExprParser.java
+│   │   │           └── Sql*ExprParser.java     # 其他表达式解析器
 │   │   └── utils/
 │   │       └── StringUtils.java
+│   ├── persistence/                            # 持久化模块
+│   │   ├── config/
+│   │   │   └── GraphDbConfig.java              # 图数据库配置
+│   │   ├── entity/
+│   │   │   ├── LineageNode.java                # 血缘节点
+│   │   │   ├── LineageEdge.java                # 血缘边
+│   │   │   └── LineageGraph.java               # 血缘图
+│   │   └── repository/
+│   │       ├── LineageRepository.java          # 持久化接口
+│   │       ├── Neo4jLineageRepository.java     # Neo4j 实现
+│   │       └── NebulaLineageRepository.java    # Nebula 实现
 │   └── sqllineageparser/model/
 │       ├── TreeNode.java                       # 通用树结构
 │       ├── TableNode.java                      # 表节点模型
@@ -118,10 +137,48 @@ sql-lineage-parser/
 │   ├── sqlProd/                                # 生产级复杂 SQL
 │   └── sqlUnion/                               # UNION 语句
 ├── RELEASE.md                                  # 版本规划文档
+├── UPDATE_CLAUDE.md                            # 变更记录
 └── pom.xml
 ```
 
 ## 核心模块
+
+### 持久化模块
+
+血缘持久化模块支持将解析结果写入图数据库。
+
+#### 实体类
+
+| 类 | 说明 |
+|---|------|
+| `LineageNode` | 血缘节点（表/列），提供 `ofTable()` / `ofColumn()` / `ofConstant()` 工厂方法 |
+| `LineageEdge` | 血缘边，表示节点间的数据流转关系 |
+| `LineageGraph` | 血缘图，封装节点和边的集合 |
+
+#### Repository 接口
+
+```java
+LineageRepository repo = new Neo4jLineageRepository(config);
+repo.connect();
+
+// 保存血缘图
+LineageGraph graph = new LineageGraph(sql);
+graph.addLineage(sourceNode, targetNode, "DERIVES_FROM");
+repo.saveGraph(graph);
+
+// 查询血缘
+List<LineageNode> upstream = repo.findUpstream(nodeId);
+List<LineageNode> downstream = repo.findDownstream(nodeId);
+
+repo.close();
+```
+
+#### 支持的图数据库
+
+| 数据库 | 实现类 | 状态 |
+|--------|--------|------|
+| Neo4j | `Neo4jLineageRepository` | 预留（Cypher 已实现） |
+| Nebula Graph | `NebulaLineageRepository` | 预留（nGQL 已实现） |
 
 ### 数据模型
 

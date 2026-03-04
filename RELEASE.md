@@ -95,6 +95,12 @@
 - [x] 常量表达式处理
 - [x] 单元测试框架
 - [x] 测试用例库（50+ 用例）
+- [x] **表达式解析器模块化** - 独立 ExprParser 文件
+- [x] **解析上下文** - ExprParseContext 保存别名映射和收集结果
+- [x] **表别名解析** - 自动解析 `a.col1` 到真实表 `t1.col1`
+- [x] **血缘持久化模块** - persistence 包（实体、Repository 接口）
+- [x] **Neo4j 持久化** - Neo4jLineageRepository（Cypher 预留）
+- [x] **Nebula 持久化** - NebulaLineageRepository（nGQL 预留）
 
 ### 开发中 🚧
 
@@ -121,7 +127,7 @@
 |------|--------|------|
 | 血缘 JSON 导出 | P1 | 标准化输出格式 |
 | DOT 格式导出 | P2 | Graphviz 可视化 |
-| 血缘图遍历 API | P1 | 上下游查询接口 |
+| ~~图数据库持久化~~ | ~~P1~~ | ✅ 已完成（Neo4j/Nebula 预留） |
 | 影响分析 | P1 | 字段变更影响范围 |
 
 #### 工程能力缺失
@@ -181,10 +187,13 @@
 
 **目标**: 丰富血缘输出能力
 
+- [x] **图数据库持久化接口** - LineageRepository
+- [x] **Neo4j 支持** - Neo4jLineageRepository (Cypher 预留)
+- [x] **Nebula Graph 支持** - NebulaLineageRepository (nGQL 预留)
+- [x] **血缘实体模型** - LineageNode / LineageEdge / LineageGraph
+- [x] **上游/下游查询接口** - findUpstream() / findDownstream()
 - [ ] JSON 格式标准化输出
 - [ ] DOT 格式输出（Graphviz）
-- [ ] 血缘图遍历 API
-- [ ] 上游追溯 / 下游影响分析
 - [ ] 血缘合并能力
 
 ### v0.6.0 - 多方言版本
@@ -358,5 +367,5 @@ case SQLOver over -> {
 
 ---
 
-*文档版本: v1.0*
-*更新时间: 2026-02-03*
+*文档版本: v1.1*
+*更新时间: 2026-02-04*
