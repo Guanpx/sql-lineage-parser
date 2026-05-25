@@ -1,6 +1,7 @@
 package com.magic.core.parser.sql.expr;
 
 import com.alibaba.druid.sql.ast.SQLExpr;
+import com.alibaba.druid.sql.ast.SQLOver;
 import com.alibaba.druid.sql.ast.expr.*;
 
 import java.util.logging.Logger;
@@ -22,7 +23,9 @@ public sealed interface BaseSqlExprParser
         SqlIdentifierExprParser,
         SqlNumberExprParser,
         SqlIntegerExprParser,
-        SqlCharExprParser {
+        SqlCharExprParser,
+        SqlOverExprParser,
+        SqlCastExprParser {
 
     Logger LOGGER = Logger.getLogger(BaseSqlExprParser.class.getName());
 
@@ -63,6 +66,10 @@ public sealed interface BaseSqlExprParser
             SqlIntegerExprParser.parse(expr, context);
         } else if (sqlExpr instanceof SQLCharExpr expr) {
             SqlCharExprParser.parse(expr, context);
+        } else if (sqlExpr instanceof SQLCastExpr expr) {
+            SqlCastExprParser.parse(expr, context);
+        } else if (sqlExpr instanceof SQLOver expr) {
+            SqlOverExprParser.parse(expr, context);
         } else {
             LOGGER.warning(() -> "不支持的表达式类型: " + sqlExpr.getClass().getSimpleName());
         }

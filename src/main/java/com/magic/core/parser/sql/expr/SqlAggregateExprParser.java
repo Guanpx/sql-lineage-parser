@@ -25,6 +25,8 @@ public final class SqlAggregateExprParser implements BaseSqlExprParser {
 
     /**
      * 解析聚合函数表达式，收集结果到上下文
+     * <p>
+     * 当聚合函数带有 OVER 子句（即窗口聚合函数）时，递归解析 PARTITION BY / ORDER BY 中的列引用
      *
      * @param expr    聚合函数表达式
      * @param context 解析上下文
@@ -35,6 +37,12 @@ public final class SqlAggregateExprParser implements BaseSqlExprParser {
         // 递归解析函数参数
         for (SQLExpr arg : expr.getArguments()) {
             BaseSqlExprParser.parserSqlExpr(arg, context);
+        }
+
+        // OVER 子句（窗口聚合）
+        if (expr.getOver() != null) {
+            LOGGER.fine(() -> "聚合 " + expr.getMethodName() + " 带 OVER 窗口");
+            SqlOverExprParser.parse(expr.getOver(), context);
         }
     }
 

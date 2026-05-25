@@ -143,7 +143,7 @@
 
 ## 三、版本发布规划
 
-### v0.1.0 - 基础版本 (Current)
+### v0.1.0 - 基础版本
 
 **目标**: 完成核心 SELECT 语句血缘解析
 
@@ -153,26 +153,57 @@
 - [x] 基础表达式解析
 - [x] 单元测试覆盖
 
-### v0.2.0 - 查询增强版本
+### v0.2.0 - 查询增强版本 (Current ✅)
 
-**目标**: 完善 SELECT 语句的所有场景
+**目标**: 在 v0.1.0 基础解析能力之上，引入解析上下文、模块化架构、图数据库持久化预留，完成 UNION / CTE / 窗口函数 / LATERAL VIEW / ALTER 等查询增强能力
 
-- [ ] UNION/INTERSECT/EXCEPT 查询支持
-- [ ] WITH 子查询（CTE）完整支持
-- [ ] 窗口函数解析
-- [ ] LATERAL VIEW 支持
+#### 已交付 ✅
+
+- [x] **Java 17 升级** - 启用 `sealed interface` / `pattern matching` / `var`
+- [x] **ExprParseContext** - 表达式解析上下文（别名映射、当前列、来源列收集、虚拟表下钻）
+- [x] **表别名自动解析** - `a.col1` → `t1.col1`
+- [x] **单表 FROM 裸列推断** - `SELECT id FROM users` 自动归属为 `users.id`
+- [x] **UNION / INTERSECT / EXCEPT** - 递归解析左右分支，按列位置合并血缘
+- [x] **WITH (CTE) 查询** - 预解析每个 CTE 列血缘并注册为虚拟表；支持多 CTE 链式引用
+- [x] **嵌套子查询血缘下钻** - FROM 子查询自动注册虚拟表，逐层解析到真实底表
+- [x] **窗口函数 (OVER)** - SUM / ROW_NUMBER / RANK / LAG / LEAD 等，PARTITION BY / ORDER BY 子句列引用全收集
+- [x] **LATERAL VIEW** - 行转列输出列映射到 UDTF 输入列
+- [x] **CAST 表达式** - 递归下钻到内部表达式
+- [x] **ALTER TABLE 解析** - 通过 `parserAlterTableSql` 解析 ADD/DROP/RENAME COLUMN
+- [x] **Expr 解析器模块化** - `BaseSqlExprParser` 密封接口 + 11 个独立 `Sql*ExprParser` 文件
+- [x] **TableSource 解析器模块化** - `BaseTableSourceParser` 密封接口 + 6 个 `Sql*TableSourceParser` 文件
+- [x] **常量识别** - SQLCharExpr / SQLIntegerExpr / SQLNumberExpr 标记为常量来源
+- [x] **持久化实体模型** - LineageNode / LineageEdge / LineageGraph + 工厂方法
+- [x] **Repository 接口** - LineageRepository 统一抽象
+- [x] **Neo4j / Nebula 预留实现** - Cypher / nGQL 语句已生成
+- [x] **调试工具集** - SqlLineageParserDebug / SqlExprParserDebug / TableSourceParserDebug
+- [x] **JUnit 5 测试套件** - 71 用例覆盖 SELECT / UNION / CTE / 嵌套子查询 / 窗口函数 / LATERAL VIEW / ALTER
+- [x] **生产 SQL 回归** - sqlProd01.sql / sqlWindow01.sql / sqlCte01.sql 等复杂 SQL 验证
+
+#### 计划中 📋
+
 - [ ] 嵌套函数深度解析优化
-- [ ] 完善测试用例覆盖
-
-### v0.3.0 - DML 支持版本
-
-**目标**: 支持数据操作语句，建立完整数据流
-
-- [ ] INSERT INTO ... SELECT 解析
-- [ ] INSERT OVERWRITE 解析
-- [ ] CREATE TABLE AS SELECT 解析
-- [ ] MERGE INTO 语句解析
+- [ ] SELECT \* 字段展开（需元数据支持）
 - [ ] 多语句批量解析
+
+### v0.3.0 - DML 支持版本 (Current 🚧)
+
+**目标**: 支持数据操作语句，建立完整数据流（源表 → 目标表）
+
+#### 已交付 ✅
+
+- [x] **INSERT INTO ... SELECT 解析** - 通过 `parserInsertSql` 提取目标表 + 显式目标列 + 源 SELECT 血缘
+- [x] **INSERT OVERWRITE 解析** - 复用 INSERT 入口，自动识别 `isOverwrite()`
+- [x] **PARTITION 子句提取** - 静态/动态分区列与值收集到 `DmlLineageInfo.partitions`
+- [x] **CREATE TABLE AS SELECT (CTAS) 解析** - 通过 `parserCreateTableSql` 解析
+- [x] **统一 DML 入口** - `parserDmlSql` 自动识别 INSERT / CTAS
+- [x] **DML 血缘模型** - `DmlLineageInfo` / `DmlOperation`，含目标列名兜底（显式列 → SELECT alias → 表达式列名）
+- [x] **DML 测试用例** - sqlInsert / sqlCtas 目录 + 7 个 @Test 用例
+
+#### 计划中 📋
+
+- [ ] MERGE INTO 语句解析
+- [ ] 多语句批量解析（脚本级 SQL 拆分与依赖）
 
 ### v0.4.0 - DDL 支持版本
 
@@ -367,5 +398,5 @@ case SQLOver over -> {
 
 ---
 
-*文档版本: v1.1*
-*更新时间: 2026-02-04*
+*文档版本: v1.4*
+*更新时间: 2026-05-20*

@@ -4,6 +4,7 @@ import com.alibaba.druid.sql.ast.statement.*;
 import com.magic.sqllineageparser.model.ColumnNode;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,14 @@ public class ExprParseContext {
     private final Map<String, String> aliasToTableMap = new HashMap<>();
 
     /**
+     * 虚拟表（CTE / 子查询）列下钻映射
+     * <p>
+     * key:   虚拟表别名（CTE 名或子查询别名）<br>
+     * value: 该虚拟表的可见列名 -> 真实来源列 列表
+     */
+    private final Map<String, Map<String, List<ColumnNode>>> virtualTableColumns = new HashMap<>();
+
+    /**
      * 当前正在解析的目标列节点
      */
     private ColumnNode currentColumn;
@@ -33,9 +42,6 @@ public class ExprParseContext {
      */
     private final List<ColumnNode> sourceColumns = new ArrayList<>();
 
-    /**
-     * 创建空的解析上下文
-     */
     public ExprParseContext() {
     }
 
@@ -68,23 +74,22 @@ public class ExprParseContext {
 
     /**
      * 添加来源列
+     * <p>
+     * 当 tableName 命中虚拟表（CTE / 子查询）时，自动下钻到真实表的真实列；
+     * 否则按 alias → 真实表名 还原，并写入一个普通来源列。
      *
-     * @param tableName  表名（或别名）
+     * @param tableName  表名（或别名 / CTE 名 / 子查询别名）
      * @param columnName 列名
      */
     public void addSourceColumn(String tableName, String columnName) {
+        if (drillDownVirtual(tableName, columnName)) {
+            return;
+        }
         ColumnNode source = new ColumnNode();
-        // 解析真实表名
-        String realTableName = resolveTableName(tableName);
-        source.setTableName(realTableName);
+        source.setTableName(resolveTableName(tableName));
         source.setName(columnName);
         source.setConstant(false);
-        sourceColumns.add(source);
-
-        // 同时添加到当前列的来源列表中
-        if (currentColumn != null) {
-            currentColumn.addSourceColumn(source);
-        }
+        recordSource(source);
     }
 
     /**
@@ -96,27 +101,37 @@ public class ExprParseContext {
         ColumnNode source = new ColumnNode();
         source.setName(value);
         source.setConstant(true);
-        sourceColumns.add(source);
-
-        if (currentColumn != null) {
-            currentColumn.addSourceColumn(source);
-        }
+        recordSource(source);
     }
 
     /**
      * 添加无表名的列引用
+     * <p>
+     * 当 FROM 中只有唯一表（含虚拟表）时，自动将该列归属到这张表；
+     * 否则按裸列保留（无 tableName）。
      *
      * @param columnName 列名
      */
     public void addColumnReference(String columnName) {
+        String inferredTable = inferSingleTableName();
+        if (inferredTable != null) {
+            addSourceColumn(inferredTable, columnName);
+            return;
+        }
         ColumnNode source = new ColumnNode();
         source.setName(columnName);
         source.setConstant(false);
-        sourceColumns.add(source);
+        recordSource(source);
+    }
 
-        if (currentColumn != null) {
-            currentColumn.addSourceColumn(source);
+    /**
+     * 当 FROM 子句仅含唯一表（含虚拟表）时返回该表名，否则返回 null
+     */
+    private String inferSingleTableName() {
+        if (aliasToTableMap.size() == 1) {
+            return aliasToTableMap.values().iterator().next();
         }
+        return null;
     }
 
     /**
@@ -157,6 +172,82 @@ public class ExprParseContext {
     }
 
     /**
+     * 注册虚拟表（CTE 或子查询）的列血缘映射
+     *
+     * @param alias         虚拟表别名 / CTE 名
+     * @param columnSources 该虚拟表暴露的列名 -> 真实来源列
+     */
+    public void registerVirtualTable(String alias, Map<String, List<ColumnNode>> columnSources) {
+        if (alias == null || columnSources == null || columnSources.isEmpty()) {
+            return;
+        }
+        virtualTableColumns.put(alias, columnSources);
+        aliasToTableMap.putIfAbsent(alias, alias);
+    }
+
+    /**
+     * 判断指定别名是否为已注册虚拟表
+     */
+    public boolean isVirtualTable(String alias) {
+        return alias != null && virtualTableColumns.containsKey(alias);
+    }
+
+    /**
+     * 获取虚拟表列血缘映射（只读视图）
+     */
+    public Map<String, List<ColumnNode>> getVirtualTableColumns(String alias) {
+        Map<String, List<ColumnNode>> cols = virtualTableColumns.get(alias);
+        return cols == null ? Collections.emptyMap() : Collections.unmodifiableMap(cols);
+    }
+
+    /**
+     * 命中虚拟表时下钻到真实来源列
+     *
+     * @return true 表示已下钻并记录来源；false 表示不是虚拟表，调用方应按普通逻辑处理
+     */
+    private boolean drillDownVirtual(String tableName, String columnName) {
+        if (tableName == null) {
+            return false;
+        }
+        // 先尝试直接命中，再尝试通过别名解析后的真实名命中
+        Map<String, List<ColumnNode>> cols = virtualTableColumns.get(tableName);
+        if (cols == null) {
+            String resolved = aliasToTableMap.get(tableName);
+            if (resolved != null && !resolved.equals(tableName)) {
+                cols = virtualTableColumns.get(resolved);
+            }
+        }
+        if (cols == null) {
+            return false;
+        }
+        List<ColumnNode> realSources = cols.get(columnName);
+        if (realSources == null || realSources.isEmpty()) {
+            return false;
+        }
+        for (ColumnNode src : realSources) {
+            recordSource(cloneColumn(src));
+        }
+        return true;
+    }
+
+    private void recordSource(ColumnNode source) {
+        sourceColumns.add(source);
+        if (currentColumn != null) {
+            currentColumn.addSourceColumn(source);
+        }
+    }
+
+    private static ColumnNode cloneColumn(ColumnNode src) {
+        ColumnNode copy = new ColumnNode();
+        copy.setTableName(src.getTableName());
+        copy.setName(src.getName());
+        copy.setAlias(src.getAlias());
+        copy.setConstant(src.isConstant());
+        copy.setExpression(src.getExpression());
+        return copy;
+    }
+
+    /**
      * 递归收集表别名
      */
     private void collectTableAlias(SQLTableSource tableSource) {
@@ -178,12 +269,18 @@ public class ExprParseContext {
         } else if (tableSource instanceof SQLSubqueryTableSource subquery) {
             String alias = subquery.getAlias();
             if (alias != null && !alias.isEmpty()) {
-                aliasToTableMap.put(alias, "(subquery:" + alias + ")");
+                aliasToTableMap.put(alias, alias);
             }
         } else if (tableSource instanceof SQLUnionQueryTableSource unionTable) {
             String alias = unionTable.getAlias();
             if (alias != null && !alias.isEmpty()) {
-                aliasToTableMap.put(alias, "(union:" + alias + ")");
+                aliasToTableMap.put(alias, alias);
+            }
+        } else if (tableSource instanceof SQLLateralViewTableSource lateralView) {
+            collectTableAlias(lateralView.getTableSource());
+            String alias = lateralView.getAlias();
+            if (alias != null && !alias.isEmpty()) {
+                aliasToTableMap.put(alias, alias);
             }
         }
     }
@@ -192,6 +289,7 @@ public class ExprParseContext {
     public String toString() {
         return "ExprParseContext{" +
                 "aliasToTableMap=" + aliasToTableMap +
+                ", virtualTables=" + virtualTableColumns.keySet() +
                 ", currentColumn=" + (currentColumn != null ? currentColumn.getName() : "null") +
                 ", sourceColumnsCount=" + sourceColumns.size() +
                 '}';

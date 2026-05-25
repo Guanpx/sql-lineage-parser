@@ -19,7 +19,8 @@ public sealed interface BaseTableSourceParser
         SqlJoinTableSourceParser,
         SqlSubqueryTableSourceParser,
         SqlUnionQueryTableSourceParser,
-        SqlWithSubqueryTableSourceParser {
+        SqlWithSubqueryTableSourceParser,
+        SqlLateralViewTableSourceParser {
 
     /**
      * 处理表源解析

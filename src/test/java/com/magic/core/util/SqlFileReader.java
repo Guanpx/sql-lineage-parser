@@ -92,4 +92,28 @@ public final class SqlFileReader {
     public static String readAlterSql(String fileName) {
         return readSqlFile("sqlAlter/" + fileName);
     }
+
+    /**
+     * 读取SELECT 子目录下的 SQL 文件 (含 CTE 等)
+     *
+     * @param fileName 文件名
+     * @return SQL内容
+     */
+    public static String readSelectSql(String fileName) {
+        return readSqlFile("sqlSelect/" + fileName);
+    }
+
+    /**
+     * 读取 INSERT 语句 SQL 文件
+     */
+    public static String readInsertSql(String fileName) {
+        return readSqlFile("sqlInsert/" + fileName);
+    }
+
+    /**
+     * 读取 CTAS 语句 SQL 文件
+     */
+    public static String readCtasSql(String fileName) {
+        return readSqlFile("sqlCtas/" + fileName);
+    }
 }

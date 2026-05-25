@@ -7,6 +7,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -166,12 +168,275 @@ class SqlLineageParserTest {
     class UnionQueryTest {
 
         @Test
-        @DisplayName("解析UNION查询 - sqlUnion01.sql (当前不支持)")
+        @DisplayName("解析UNION查询 - sqlUnion01.sql")
         void testParseUnionQuery() {
             String sql = SqlFileReader.readUnionSql("sqlUnion01.sql");
-            // UNION 查询当前返回 null (不支持)
             TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
-            assertNull(result, "UNION查询当前不支持，应返回null");
+            assertNotNull(result, "UNION 查询应返回血缘树");
+            // 左右分支各 5 列, 按位置合并后输出 5 列
+            assertEquals(5, result.getChildren().size());
+            // 第二列 order_id / invoice_id 的来源应同时包含两个分支
+            ColumnNode secondCol = result.getChildren().get(1).getValue();
+            assertTrue(secondCol.getSourceColumns().size() >= 2,
+                    "UNION 第二列应合并来自 orders 和 invoices 的来源");
+        }
+
+        @Test
+        @DisplayName("解析内联 UNION ALL")
+        void testParseUnionAll() {
+            String sql = "SELECT a FROM t1 UNION ALL SELECT b FROM t2 UNION ALL SELECT c FROM t3";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            assertEquals(1, result.getChildren().size());
+            ColumnNode col = result.getChildren().get(0).getValue();
+            // 3 个分支的来源都应被合并
+            assertEquals(3, col.getSourceColumns().size());
+        }
+    }
+
+    @Nested
+    @DisplayName("CTE / WITH 查询测试")
+    class CteQueryTest {
+
+        @Test
+        @DisplayName("解析单个 CTE - 列血缘下钻到真实表")
+        void testParseSingleCte() {
+            String sql = "WITH cte1 AS (SELECT id AS uid, name FROM users) " +
+                    "SELECT cte1.uid, cte1.name FROM cte1";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            assertEquals(2, result.getChildren().size());
+            ColumnNode firstCol = result.getChildren().get(0).getValue();
+            // 应下钻到 users.id（不再是 cte1.uid）
+            assertEquals(1, firstCol.getSourceColumns().size());
+            assertEquals("users", firstCol.getSourceColumns().get(0).getTableName());
+            assertEquals("id", firstCol.getSourceColumns().get(0).getName());
+        }
+
+        @Test
+        @DisplayName("解析多个 CTE 链式引用")
+        void testParseChainedCte() {
+            String sql = "WITH a AS (SELECT id FROM t1), " +
+                    "     b AS (SELECT id FROM a) " +
+                    "SELECT b.id FROM b";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode col = result.getChildren().get(0).getValue();
+            assertEquals(1, col.getSourceColumns().size());
+            assertEquals("t1", col.getSourceColumns().get(0).getTableName());
+        }
+
+        @Test
+        @DisplayName("解析 CTE SQL 文件 - sqlCte01.sql")
+        void testCteFromFile() {
+            String sql = SqlFileReader.readSelectSql("sqlCte01.sql");
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            // 输出 4 个字段
+            assertEquals(4, result.getChildren().size());
+            // user_name 来源应包含 users.name
+            ColumnNode userNameCol = result.getChildren().get(1).getValue();
+            assertTrue(userNameCol.getSourceColumns().stream()
+                    .anyMatch(s -> "users".equals(s.getTableName()) && "name".equals(s.getName())));
+        }
+    }
+
+    @Nested
+    @DisplayName("嵌套子查询血缘下钻测试")
+    class NestedSubqueryTest {
+
+        @Test
+        @DisplayName("子查询作为表源时, 外层引用应下钻到真实表")
+        void testNestedSubqueryDrillDown() {
+            String sql = "SELECT t.uid FROM (SELECT id AS uid FROM users) t";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode col = result.getChildren().get(0).getValue();
+            assertEquals(1, col.getSourceColumns().size());
+            assertEquals("users", col.getSourceColumns().get(0).getTableName());
+            assertEquals("id", col.getSourceColumns().get(0).getName());
+        }
+    }
+
+    @Nested
+    @DisplayName("窗口函数测试")
+    class WindowFunctionTest {
+
+        @Test
+        @DisplayName("解析 ROW_NUMBER OVER")
+        void testRowNumberOver() {
+            String sql = "SELECT ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) AS rn FROM emp";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode col = result.getChildren().get(0).getValue();
+            // PARTITION BY dept_id, ORDER BY salary 都应作为来源列
+            assertTrue(col.getSourceColumns().size() >= 2);
+        }
+
+        @Test
+        @DisplayName("解析 SUM OVER 窗口聚合")
+        void testSumOver() {
+            String sql = "SELECT user_id, SUM(amount) OVER (PARTITION BY user_id) AS total FROM orders";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode totalCol = result.getChildren().get(1).getValue();
+            // amount 和 user_id 都应被收集
+            assertTrue(totalCol.getSourceColumns().size() >= 2);
+        }
+
+        @Test
+        @DisplayName("解析窗口函数 SQL 文件 - sqlWindow01.sql")
+        void testWindowSqlFromFile() {
+            String sql = SqlFileReader.readFunctionSql("sqlWindow01.sql");
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            // 应解析出 7 个输出列
+            assertEquals(7, result.getChildren().size());
+        }
+    }
+
+    @Nested
+    @DisplayName("LATERAL VIEW 测试")
+    class LateralViewTest {
+
+        @Test
+        @DisplayName("LATERAL VIEW explode 输出列下钻到方法参数")
+        void testLateralViewExplode() {
+            String sql = "SELECT v.item FROM mytable t LATERAL VIEW explode(t.arr) v AS item";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode col = result.getChildren().get(0).getValue();
+            assertEquals(1, col.getSourceColumns().size());
+            assertEquals("arr", col.getSourceColumns().get(0).getName());
+        }
+    }
+
+    @Nested
+    @DisplayName("ALTER TABLE 测试")
+    class AlterTableTest {
+
+        @Test
+        @DisplayName("ADD COLUMNS 解析")
+        void testAlterAddColumns() {
+            String sql = "ALTER TABLE fce_stock.dest_test ADD COLUMNS (first_code string COMMENT '首code')";
+            var info = SqlLineageParser.parserAlterTableSql(sql);
+            assertNotNull(info);
+            assertEquals("fce_stock", info.getSchema());
+            assertEquals("dest_test", info.getTableName());
+            assertEquals(1, info.getChanges().size());
+            var change = info.getChanges().get(0);
+            assertEquals(com.magic.sqllineageparser.model.AlterColumnChange.Action.ADD, change.getAction());
+            assertEquals("first_code", change.getColumnName());
+            assertEquals("首code", change.getComment());
+        }
+
+        @Test
+        @DisplayName("从用例文件解析 sqlAlter01.sql")
+        void testAlterFromFile() {
+            String sql = SqlFileReader.readAlterSql("sqlAlter01.sql");
+            var info = SqlLineageParser.parserAlterTableSql(sql);
+            assertNotNull(info);
+            assertNotNull(info.getTableName());
+            assertFalse(info.getChanges().isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("INSERT 语句测试")
+    class InsertStatementTest {
+
+        @Test
+        @DisplayName("INSERT INTO ... SELECT 提取目标表与目标列")
+        void testInsertIntoSelect() {
+            String sql = SqlFileReader.readInsertSql("sqlInsert01.sql");
+            var info = SqlLineageParser.parserInsertSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.INSERT_INTO, info.getOperation());
+            assertEquals("dw", info.getTargetSchema());
+            assertEquals("user_summary", info.getTargetTable());
+            assertEquals(List.of("user_id", "user_name", "total_amount"), info.getTargetColumns());
+            assertNotNull(info.getSourceLineage());
+            assertEquals(3, info.getOutputColumnCount());
+            // 第 1 列 user_id 应来自 users.id
+            ColumnNode firstSource = info.getSourceLineage().getChildren().get(0).getValue();
+            assertTrue(firstSource.getSourceColumns().stream()
+                    .anyMatch(s -> "users".equals(s.getTableName()) && "id".equals(s.getName())));
+        }
+
+        @Test
+        @DisplayName("INSERT OVERWRITE 带 PARTITION 解析")
+        void testInsertOverwriteWithPartition() {
+            String sql = SqlFileReader.readInsertSql("sqlInsertOverwrite01.sql");
+            var info = SqlLineageParser.parserInsertSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.INSERT_OVERWRITE, info.getOperation());
+            assertEquals("dw", info.getTargetSchema());
+            assertEquals("daily_order", info.getTargetTable());
+            assertEquals(1, info.getPartitions().size());
+            assertEquals("'2026-05-20'", info.getPartitions().get("dt"));
+            assertEquals(4, info.getOutputColumnCount());
+        }
+
+        @Test
+        @DisplayName("INSERT INTO 无显式列时 targetColumns 为空, 回退到 alias")
+        void testInsertWithoutExplicitColumns() {
+            String sql = "INSERT INTO dw.t SELECT a.id AS uid, a.name FROM users a";
+            var info = SqlLineageParser.parserInsertSql(sql);
+            assertNotNull(info);
+            assertTrue(info.getTargetColumns().isEmpty());
+            assertEquals("uid", info.getTargetColumnAt(0));
+            assertEquals("name", info.getTargetColumnAt(1));
+        }
+
+        @Test
+        @DisplayName("统一 DML 入口识别 INSERT 语句")
+        void testUnifiedDmlEntryInsert() {
+            String sql = "INSERT INTO t SELECT id FROM users";
+            var info = SqlLineageParser.parserDmlSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.INSERT_INTO, info.getOperation());
+        }
+    }
+
+    @Nested
+    @DisplayName("CREATE TABLE AS SELECT 测试")
+    class CtasTest {
+
+        @Test
+        @DisplayName("解析 CTAS SQL 文件")
+        void testCtasFromFile() {
+            String sql = SqlFileReader.readCtasSql("sqlCtas01.sql");
+            var info = SqlLineageParser.parserCreateTableSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.CTAS, info.getOperation());
+            assertEquals("dw", info.getTargetSchema());
+            assertEquals("top_users", info.getTargetTable());
+            assertEquals(3, info.getOutputColumnCount());
+            // 无显式列定义时, getTargetColumnAt 应回退到 alias
+            assertEquals("user_id", info.getTargetColumnAt(0));
+            assertEquals("user_name", info.getTargetColumnAt(1));
+            assertEquals("total_amount", info.getTargetColumnAt(2));
+            // total_amount 来源应包含 orders.amount
+            ColumnNode totalCol = info.getSourceLineage().getChildren().get(2).getValue();
+            assertTrue(totalCol.getSourceColumns().stream()
+                    .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())));
+        }
+
+        @Test
+        @DisplayName("非 CTAS 的 CREATE TABLE 返回 null")
+        void testNonCtasReturnsNull() {
+            String sql = "CREATE TABLE t (id int, name string)";
+            var info = SqlLineageParser.parserCreateTableSql(sql);
+            assertNull(info);
+        }
+
+        @Test
+        @DisplayName("统一 DML 入口识别 CTAS 语句")
+        void testUnifiedDmlEntryCtas() {
+            String sql = "CREATE TABLE t AS SELECT id FROM users";
+            var info = SqlLineageParser.parserDmlSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.CTAS, info.getOperation());
         }
     }
 
