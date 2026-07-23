@@ -81,32 +81,48 @@
 
 ## 二、当前项目状态评估
 
+> 本节为「能力模型」与「当前代码」之间的快照对照，更细粒度的版本进度见第三节。
+> 当前版本：**v0.3.0**（DML 已交付，MERGE INTO / 多语句脚本开发中）。
+
 ### 已完成 ✅
 
 - [x] 项目基础架构搭建
-- [x] 数据模型定义（TreeNode, ColumnNode, TableNode）
+- [x] 数据模型定义（TreeNode, ColumnNode, TableNode, AlterTableInfo, DmlLineageInfo）
 - [x] 单表 SELECT 解析
 - [x] JOIN 查询解析
-- [x] 子查询解析（SQLSubqueryTableSource）
+- [x] 子查询解析（SQLSubqueryTableSource，支持外层 alias.col 下钻）
 - [x] CASE WHEN 表达式解析
 - [x] 聚合函数解析（SUM, COUNT, AVG, MAX, MIN）
 - [x] 函数调用解析（IF, NVL, CONCAT, SUBSTR 等）
 - [x] 二元运算表达式解析
 - [x] 常量表达式处理
 - [x] 单元测试框架
-- [x] 测试用例库（50+ 用例）
-- [x] **表达式解析器模块化** - 独立 ExprParser 文件
-- [x] **解析上下文** - ExprParseContext 保存别名映射和收集结果
+- [x] 测试用例库（78 个 @Test 用例）
+- [x] **表达式解析器模块化** - `BaseSqlExprParser` 密封接口 + 11 个独立 ExprParser 文件
+- [x] **表源解析器模块化** - `BaseTableSourceParser` 密封接口 + 6 个 TableSourceParser 文件
+- [x] **解析上下文** - ExprParseContext（别名映射、目标列、来源列收集、虚拟表下钻）
 - [x] **表别名解析** - 自动解析 `a.col1` 到真实表 `t1.col1`
+- [x] **单表 FROM 裸列推断** - `SELECT id FROM users` 自动归属为 `users.id`
+- [x] **UNION / INTERSECT / EXCEPT** - 按列位置合并左右分支血缘
+- [x] **WITH (CTE) 查询** - 预解析 CTE 列血缘并注册为虚拟表，支持链式 CTE
+- [x] **嵌套子查询血缘下钻** - FROM 子查询逐层解析到真实底表
+- [x] **窗口函数 (OVER)** - PARTITION BY / ORDER BY / SORT BY / DISTRIBUTE BY / CLUSTER BY 列引用全收集
+- [x] **LATERAL VIEW** - 行转列输出列映射到 UDTF 输入列
+- [x] **CAST 表达式** - 递归下钻到内部表达式
+- [x] **ALTER TABLE 解析** - ADD COLUMNS / DROP COLUMN / RENAME COLUMN
+- [x] **INSERT INTO / OVERWRITE 解析** - 目标表 + 显式目标列 + PARTITION + 源 SELECT 血缘
+- [x] **CREATE TABLE AS SELECT (CTAS) 解析**
+- [x] **CREATE VIEW 解析** - 视图定义的列血缘 + 显式列覆盖
+- [x] **统一 DML 入口** - `parserDmlSql` 自动识别 INSERT / CTAS / CREATE VIEW
 - [x] **血缘持久化模块** - persistence 包（实体、Repository 接口）
 - [x] **Neo4j 持久化** - Neo4jLineageRepository（Cypher 预留）
 - [x] **Nebula 持久化** - NebulaLineageRepository（nGQL 预留）
 
 ### 开发中 🚧
 
-- [ ] UNION 查询解析（框架已建立，实现返回 null）
-- [ ] WITH 子查询/CTE 解析（框架已建立，待实现）
-- [ ] ALTER 语句解析
+- [ ] MERGE INTO 语句解析（UPSERT 场景）
+- [ ] 多语句脚本解析（批量 SQL 拆分与依赖）
+- [ ] Java 17 升级后特性的持续应用（pattern matching / sealed interface）
 
 ### 缺失功能 ❌
 
@@ -114,19 +130,19 @@
 
 | 功能 | 重要性 | 说明 |
 |------|--------|------|
-| INSERT 语句解析 | P0 | 无法追踪目标表，血缘不完整 |
-| CTAS 语句解析 | P0 | CREATE TABLE AS SELECT 不支持 |
-| 窗口函数解析 | P1 | ROW_NUMBER, RANK, LAG 等 |
-| LATERAL VIEW | P1 | Hive 行转列场景常用 |
+| MERGE INTO 解析 | P1 | UPSERT 场景的 source/target 字段匹配（v0.3.0 余项） |
+| 多语句解析 | P1 | 批量 SQL 脚本（v0.3.0 余项） |
+| CREATE TABLE 纯 DDL | P1 | 字段元信息提取（v0.4.0） |
+| DROP 语句识别 | P2 | DROP TABLE/VIEW 血缘失效（v0.4.0） |
+| ALTER MODIFY/CHANGE | P2 | Hive 的 MODIFY COLUMN / CHANGE COLUMN（v0.4.0） |
 | SELECT * 展开 | P1 | 通配符需要元数据支持才能展开 |
-| 多语句解析 | P1 | 批量 SQL 脚本 |
 
 #### 输出能力缺失
 
 | 功能 | 重要性 | 说明 |
 |------|--------|------|
-| 血缘 JSON 导出 | P1 | 标准化输出格式 |
-| DOT 格式导出 | P2 | Graphviz 可视化 |
+| 血缘 JSON 导出 | P1 | 标准化输出格式（v0.5.0） |
+| DOT 格式导出 | P2 | Graphviz 可视化（v0.5.0） |
 | ~~图数据库持久化~~ | ~~P1~~ | ✅ 已完成（Neo4j/Nebula 预留） |
 | 影响分析 | P1 | 字段变更影响范围 |
 
@@ -177,7 +193,7 @@
 - [x] **Repository 接口** - LineageRepository 统一抽象
 - [x] **Neo4j / Nebula 预留实现** - Cypher / nGQL 语句已生成
 - [x] **调试工具集** - SqlLineageParserDebug / SqlExprParserDebug / TableSourceParserDebug
-- [x] **JUnit 5 测试套件** - 71 用例覆盖 SELECT / UNION / CTE / 嵌套子查询 / 窗口函数 / LATERAL VIEW / ALTER
+- [x] **JUnit 5 测试套件** - 71 用例覆盖 SELECT / UNION / CTE / 嵌套子查询 / 窗口函数 / LATERAL VIEW / ALTER（v0.3.0 后增至 78）
 - [x] **生产 SQL 回归** - sqlProd01.sql / sqlWindow01.sql / sqlCte01.sql 等复杂 SQL 验证
 
 #### 计划中 📋
@@ -196,9 +212,10 @@
 - [x] **INSERT OVERWRITE 解析** - 复用 INSERT 入口，自动识别 `isOverwrite()`
 - [x] **PARTITION 子句提取** - 静态/动态分区列与值收集到 `DmlLineageInfo.partitions`
 - [x] **CREATE TABLE AS SELECT (CTAS) 解析** - 通过 `parserCreateTableSql` 解析
-- [x] **统一 DML 入口** - `parserDmlSql` 自动识别 INSERT / CTAS
+- [x] **CREATE VIEW 解析** - 通过 `parserCreateViewSql` 解析视图定义的列血缘，支持显式列覆盖
+- [x] **统一 DML 入口** - `parserDmlSql` 自动识别 INSERT / CTAS / CREATE VIEW
 - [x] **DML 血缘模型** - `DmlLineageInfo` / `DmlOperation`，含目标列名兜底（显式列 → SELECT alias → 表达式列名）
-- [x] **DML 测试用例** - sqlInsert / sqlCtas 目录 + 7 个 @Test 用例
+- [x] **DML 测试用例** - sqlInsert / sqlCtas / sqlView 目录 + 11 个 @Test 用例
 
 #### 计划中 📋
 
@@ -209,9 +226,14 @@
 
 **目标**: 支持表结构定义语句
 
+#### 已交付 ✅
+
+- [x] **CREATE VIEW 解析** - `parserCreateViewSql` 解析视图定义的列血缘，支持显式列覆盖；纳入统一 DML 入口 `parserDmlSql`
+
+#### 计划中 📋
+
 - [ ] CREATE TABLE 解析（提取字段元信息）
-- [ ] CREATE VIEW 解析
-- [ ] ALTER TABLE 字段变更追踪
+- [ ] ALTER TABLE 字段变更追踪（MODIFY/CHANGE COLUMN 等 Hive 扩展）
 - [ ] DROP 语句识别
 
 ### v0.5.0 - 输出增强版本
@@ -362,11 +384,18 @@ case SQLOver over -> {
 | JOIN 场景 | 15+ | ✅ 已覆盖 |
 | 子查询 | 15+ | ✅ 已覆盖 |
 | 函数表达式 | 30+ | ✅ 已覆盖 |
-| UNION | 10+ | 🚧 部分 |
-| CTE | 10+ | 🚧 部分 |
-| INSERT | 15+ | ❌ 待添加 |
-| DDL | 20+ | ❌ 待添加 |
+| UNION | 10+ | ✅ 已覆盖 |
+| CTE | 10+ | ✅ 已覆盖 |
+| 窗口函数 | 10+ | ✅ 已覆盖 |
+| LATERAL VIEW | 5+ | ✅ 已覆盖 |
+| INSERT | 15+ | ✅ 已覆盖（INSERT INTO / OVERWRITE / PARTITION） |
+| CTAS | 5+ | ✅ 已覆盖 |
+| CREATE VIEW | 5+ | ✅ 已覆盖（基本 + 显式列覆盖 + 统一入口） |
+| ALTER | 5+ | ✅ 已覆盖 |
+| DDL（CREATE TABLE/DROP） | 20+ | ❌ 待添加（v0.4.0） |
 | 生产复杂 SQL | 10+ | ✅ 已覆盖 |
+
+> 当前 @Test 总数：**82**（截至 v0.4.0 CREATE VIEW）。
 
 ---
 
@@ -398,5 +427,5 @@ case SQLOver over -> {
 
 ---
 
-*文档版本: v1.4*
-*更新时间: 2026-05-20*
+*文档版本: v1.6*
+*更新时间: 2026-07-07*

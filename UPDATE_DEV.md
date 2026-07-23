@@ -1,4 +1,86 @@
-# UPDATE_CLAUDE.md - 变更记录
+# UPDATE_DEV.md - 变更记录
+
+## 2026-07-07 新增 CREATE VIEW 解析（v0.4.0 DDL 首项）
+
+### 概述
+
+按用户选定的开发路线推进 v0.4.0 DDL 支持的首项能力：解析 `CREATE VIEW ... AS SELECT`，将视图定义（本质是一段 SELECT）的列血缘挂到视图目标表上。结构与 CTAS 高度同构，深度复用 `SqlLineageParser.parseSelect`，无新模型字段。所有 82 个单元测试通过（v0.3.0 的 78 + 新增 4）。
+
+### 新增能力
+
+| 能力 | 关键实现 | 测试 |
+|------|----------|------|
+| CREATE VIEW ... AS SELECT 解析 | 新增 `SqlCreateViewParser.parse(SQLCreateViewStatement)`，提取视图名 + 显式列覆盖 + 源 SELECT 血缘 | `CreateViewTest` 4 用例 |
+| 统一 DML 入口扩展 | `parserDmlSql` 新增 `SQLCreateViewStatement` 分支 | `testUnifiedDmlEntryCreateView` |
+| 独立入口 | `SqlLineageParser.parserCreateViewSql(sql)` | `testCreateViewBasic` / `testCreateViewExplicitColumns` |
+| 视图显式列覆盖 | 从 `SQLCreateViewStatement.getColumns()`（List<SQLTableElement>）提取 SQLColumnDefinition 名 | `testCreateViewExplicitColumns` 验证 (uid, total) 按位置对齐 |
+
+### 关键文件
+
+新增：
+```
+src/main/java/com/magic/core/parser/sql/ddl/SqlCreateViewParser.java   # CREATE VIEW 解析器（ddl 子包）
+sqls/sqlView/sqlCreateView01.sql                                       # JOIN + 聚合视图用例
+sqls/sqlView/sqlCreateView02.sql                                       # 显式列覆盖用例
+```
+
+修改：
+```
+src/main/java/com/magic/sqllineageparser/model/DmlOperation.java        # 新增 CREATE_VIEW 枚举值
+src/main/java/com/magic/core/parser/SqlLineageParser.java               # 新增 parserCreateViewSql + parserDmlSql 扩展
+src/test/java/com/magic/core/util/SqlFileReader.java                    # 新增 readViewSql
+src/test/java/com/magic/core/parser/SqlLineageParserTest.java           # 新增 CreateViewTest 4 用例
+README.md / RELEASE.md                                                  # 同步 v0.4.0 CREATE VIEW 状态
+```
+
+### 实现要点
+
+- **AST 形态确认**：Druid 1.2.20 的 `SQLCreateViewStatement` 通过 `getTableSource()` 返回 `SQLExprTableSource`（视图名）、`getSubQuery()` 返回 `SQLSelect`（AS 子查询）、`getColumns()` 返回 `List<SQLTableElement>`（显式列覆盖，元素为 `SQLColumnDefinition`）。
+- **DDL vs DML 包归属**：CREATE VIEW 语义上是 DDL，因此新解析器放在新 `ddl` 子包下；但返回类型复用 `DmlLineageInfo` + `DmlOperation.CREATE_VIEW`，避免引入字段重叠的新模型。
+- **目标列对齐**：与 CTAS 同策略——显式列覆盖优先；缺失时通过 `DmlLineageInfo.getTargetColumnAt(i)` 三级兜底（显式列 → SELECT alias → expression 列名）。
+- **统一入口语义扩展**：`parserDmlSql` 现成为「任何带目标表 + 源 SELECT 血缘」的统一入口（INSERT / CTAS / CREATE VIEW），方法 Javadoc 已同步更新。
+
+### 验证
+
+- `mvn test` BUILD SUCCESS，82 个 @Test 全绿
+- 既有 INSERT / CTAS 用例回归无变化（4 + 3 全过）
+
+---
+
+## 2026-07-07 文档对齐（v0.3.0 当前状态）
+
+### 操作背景
+
+代码已推进到 v0.3.0（DML 已交付，78 个测试用例通过），但 README / RELEASE 文档存在滞后：
+
+- README 「v0.2.0 功能详情」段写 71 用例，与「开发状态」段 78 用例不一致
+- RELEASE 「二、当前项目状态评估」仍把 UNION / CTE / ALTER 标为开发中，把 INSERT / CTAS / 窗口函数 / LATERAL VIEW 标为缺失，与代码严重脱节
+- RELEASE 「测试用例分类」表把 INSERT 标为 ❌ 待添加，已过时
+
+本次仅做文档对齐，**不改代码**。
+
+### 修改文件
+
+```
+README.md
+  - v0.2.0 测试条目：71 → 78，用例范围补 INSERT / CTAS
+
+RELEASE.md
+  - 第二节「当前项目状态评估」整段重写：
+      · 已完成项补充 UNION / CTE / 嵌套子查询 / 窗口函数 / LATERAL VIEW / CAST / ALTER / INSERT / CTAS / 统一 DML 入口
+      · 开发中项改为 MERGE INTO / 多语句脚本
+      · 缺失能力表移除已交付项，新增 CREATE VIEW / CREATE TABLE DDL / DROP / ALTER MODIFY
+  - 测试用例分类表：INSERT 改 ✅，新增 CTAS / 窗口函数 / LATERAL VIEW / ALTER 行；总数标注 78
+  - v0.2.0 段保留 71（历史准确）并加注 v0.3.0 后增至 78
+  - 文档版本号 v1.4 → v1.5，更新时间 → 2026-07-07
+```
+
+### 验证
+
+- `grep -rE "@Test" src/test` 实测 78 个用例，三处文档统一为 78
+- 代码未变更，无需运行测试
+
+---
 
 ## 2026-05-20 启动 v0.3.0 DML 支持
 

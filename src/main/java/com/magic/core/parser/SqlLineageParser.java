@@ -10,6 +10,7 @@ import com.alibaba.druid.sql.ast.expr.SQLMethodInvokeExpr;
 import com.alibaba.druid.sql.ast.expr.SQLPropertyExpr;
 import com.alibaba.druid.sql.ast.statement.*;
 import com.magic.core.parser.sql.alter.SqlAlterTableParser;
+import com.magic.core.parser.sql.ddl.SqlCreateViewParser;
 import com.magic.core.parser.sql.dml.SqlCreateTableAsParser;
 import com.magic.core.parser.sql.dml.SqlInsertParser;
 import com.magic.core.parser.sql.expr.BaseSqlExprParser;
@@ -117,7 +118,7 @@ public final class SqlLineageParser {
     }
 
     /**
-     * 统一 DML 入口：自动识别 INSERT / CTAS 并解析。
+     * 统一 DML 入口：自动识别 INSERT / CTAS / CREATE VIEW 并解析。
      *
      * @param sql 待解析 SQL 文本
      * @return DML 血缘信息；不识别返回 null
@@ -133,7 +134,28 @@ public final class SqlLineageParser {
         if (stmt instanceof SQLCreateTableStatement create) {
             return SqlCreateTableAsParser.parse(create);
         }
-        LOGGER.warning(() -> "非 DML 语句（INSERT/CTAS）: " + stmt.getClass().getSimpleName());
+        if (stmt instanceof SQLCreateViewStatement view) {
+            return SqlCreateViewParser.parse(view);
+        }
+        LOGGER.warning(() -> "非 DML 语句（INSERT/CTAS/CREATE VIEW）: " + stmt.getClass().getSimpleName());
+        return null;
+    }
+
+    /**
+     * 解析 CREATE VIEW ... AS SELECT 语句
+     *
+     * @param sql CREATE VIEW 语句文本
+     * @return 视图血缘信息；非 CREATE VIEW 或空 SQL 返回 null
+     */
+    public static DmlLineageInfo parserCreateViewSql(String sql) {
+        if (StringUtils.isEmpty(sql)) {
+            return null;
+        }
+        SQLStatement stmt = SQLUtils.parseSingleStatement(sql, DbType.hive);
+        if (stmt instanceof SQLCreateViewStatement view) {
+            return SqlCreateViewParser.parse(view);
+        }
+        LOGGER.warning(() -> "非 CREATE VIEW 语句: " + stmt.getClass().getSimpleName());
         return null;
     }
 

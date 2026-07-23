@@ -441,6 +441,67 @@ class SqlLineageParserTest {
     }
 
     @Nested
+    @DisplayName("CREATE VIEW 测试")
+    class CreateViewTest {
+
+        @Test
+        @DisplayName("解析 CREATE VIEW ... AS SELECT 提取目标表与目标列")
+        void testCreateViewBasic() {
+            String sql = SqlFileReader.readViewSql("sqlCreateView01.sql");
+            var info = SqlLineageParser.parserCreateViewSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.CREATE_VIEW, info.getOperation());
+            assertEquals("dw", info.getTargetSchema());
+            assertEquals("v_active_user", info.getTargetTable());
+            // 无显式列覆盖时 targetColumns 为空, 回退到 SELECT alias
+            assertTrue(info.getTargetColumns().isEmpty());
+            assertEquals(3, info.getOutputColumnCount());
+            assertEquals("user_id", info.getTargetColumnAt(0));
+            assertEquals("user_name", info.getTargetColumnAt(1));
+            assertEquals("total_amount", info.getTargetColumnAt(2));
+            // total_amount 应来自 orders.amount
+            ColumnNode totalCol = info.getSourceLineage().getChildren().get(2).getValue();
+            assertTrue(totalCol.getSourceColumns().stream()
+                    .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())));
+        }
+
+        @Test
+        @DisplayName("CREATE VIEW 显式列覆盖时按位置对齐 SELECT")
+        void testCreateViewExplicitColumns() {
+            String sql = SqlFileReader.readViewSql("sqlCreateView02.sql");
+            var info = SqlLineageParser.parserCreateViewSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.CREATE_VIEW, info.getOperation());
+            assertEquals("dw", info.getTargetSchema());
+            assertEquals("v_order_summary", info.getTargetTable());
+            assertEquals(List.of("uid", "total"), info.getTargetColumns());
+            assertEquals(2, info.getOutputColumnCount());
+            // 第 2 列 total 应来自 orders.amount
+            ColumnNode totalCol = info.getSourceLineage().getChildren().get(1).getValue();
+            assertTrue(totalCol.getSourceColumns().stream()
+                    .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())));
+        }
+
+        @Test
+        @DisplayName("统一 DML 入口识别 CREATE VIEW 语句")
+        void testUnifiedDmlEntryCreateView() {
+            String sql = "CREATE VIEW dw.v1 AS SELECT id FROM users";
+            var info = SqlLineageParser.parserDmlSql(sql);
+            assertNotNull(info);
+            assertEquals(com.magic.sqllineageparser.model.DmlOperation.CREATE_VIEW, info.getOperation());
+            assertEquals("v1", info.getTargetTable());
+        }
+
+        @Test
+        @DisplayName("非 CREATE VIEW 语句返回 null")
+        void testNonCreateViewReturnsNull() {
+            String sql = "SELECT id, name FROM users";
+            var info = SqlLineageParser.parserCreateViewSql(sql);
+            assertNull(info);
+        }
+    }
+
+    @Nested
     @DisplayName("复杂生产SQL测试")
     class ProductionSqlTest {
 

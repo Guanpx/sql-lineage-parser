@@ -116,4 +116,11 @@ public final class SqlFileReader {
     public static String readCtasSql(String fileName) {
         return readSqlFile("sqlCtas/" + fileName);
     }
+
+    /**
+     * 读取 CREATE VIEW 语句 SQL 文件
+     */
+    public static String readViewSql(String fileName) {
+        return readSqlFile("sqlView/" + fileName);
+    }
 }

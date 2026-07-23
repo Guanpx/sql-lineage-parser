@@ -21,5 +21,10 @@ public enum DmlOperation {
     /**
      * CREATE TABLE ... AS SELECT
      */
-    CTAS
+    CTAS,
+
+    /**
+     * CREATE VIEW ... AS SELECT
+     */
+    CREATE_VIEW
 }
