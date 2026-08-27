@@ -2,14 +2,17 @@ package com.magic.core.parser;
 
 import com.alibaba.druid.DbType;
 import com.alibaba.druid.sql.SQLUtils;
+import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.SQLStatement;
-import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
 import com.alibaba.druid.sql.ast.expr.SQLMethodInvokeExpr;
 import com.alibaba.druid.sql.ast.expr.SQLPropertyExpr;
 import com.alibaba.druid.sql.ast.statement.*;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlAlterTableModifyColumn;
+import com.alibaba.druid.sql.parser.ParserException;
 import com.magic.core.parser.sql.alter.SqlAlterTableParser;
+import com.magic.core.parser.sql.ddl.SqlCreateTableParser;
 import com.magic.core.parser.sql.ddl.SqlCreateViewParser;
 import com.magic.core.parser.sql.dml.SqlCreateTableAsParser;
 import com.magic.core.parser.sql.dml.SqlInsertParser;
@@ -17,6 +20,7 @@ import com.magic.core.parser.sql.expr.BaseSqlExprParser;
 import com.magic.core.parser.sql.expr.ExprParseContext;
 import com.magic.core.utils.StringUtils;
 import com.magic.sqllineageparser.model.AlterTableInfo;
+import com.magic.sqllineageparser.model.CreateTableInfo;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.TreeNode;
@@ -73,11 +77,54 @@ public final class SqlLineageParser {
         if (StringUtils.isEmpty(sql)) {
             return null;
         }
-        SQLStatement stmt = SQLUtils.parseSingleStatement(sql, DbType.hive);
+        SQLStatement stmt = parseAlterStatement(sql);
         if (stmt instanceof SQLAlterTableStatement alter) {
             return SqlAlterTableParser.parse(alter);
         }
         LOGGER.warning(() -> "非 ALTER TABLE 语句: " + stmt.getClass().getSimpleName());
+        return null;
+    }
+
+    /**
+     * Hive 是主方言；Druid 的 Hive 方言没有 MODIFY COLUMN 独立分支，
+     * 仅在 MySQL 兼容解析得到 MODIFY COLUMN 时回退，其余解析异常原样抛出。
+     */
+    private static SQLStatement parseAlterStatement(String sql) {
+        try {
+            return SQLUtils.parseSingleStatement(sql, DbType.hive);
+        } catch (ParserException hiveError) {
+            SQLStatement fallback;
+            try {
+                fallback = SQLUtils.parseSingleStatement(sql, DbType.mysql);
+            } catch (ParserException mysqlError) {
+                throw hiveError;
+            }
+            boolean modifyCompatible = fallback instanceof SQLAlterTableStatement alter
+                    && alter.getItems() != null
+                    && alter.getItems().stream()
+                            .anyMatch(item -> item instanceof MySqlAlterTableModifyColumn);
+            if (modifyCompatible) {
+                return fallback;
+            }
+            throw hiveError;
+        }
+    }
+
+    /**
+     * 解析不带 AS SELECT 的 CREATE TABLE 语句，提取表与字段元信息。
+     *
+     * @param sql CREATE TABLE 语句文本
+     * @return 建表元信息；CTAS、非 CREATE TABLE 或空 SQL 返回 null
+     */
+    public static CreateTableInfo parserCreateTableDdlSql(String sql) {
+        if (StringUtils.isEmpty(sql)) {
+            return null;
+        }
+        SQLStatement stmt = SQLUtils.parseSingleStatement(sql, DbType.hive);
+        if (stmt instanceof SQLCreateTableStatement create) {
+            return SqlCreateTableParser.parse(create);
+        }
+        LOGGER.warning(() -> "非 CREATE TABLE 语句: " + stmt.getClass().getSimpleName());
         return null;
     }
 

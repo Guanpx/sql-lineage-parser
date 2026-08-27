@@ -53,6 +53,19 @@ public class AlterColumnChange {
         return change;
     }
 
+    public static AlterColumnChange ofModify(String columnName,
+                                             String newColumnName,
+                                             String dataType,
+                                             String comment) {
+        AlterColumnChange change = new AlterColumnChange();
+        change.action = Action.MODIFY;
+        change.columnName = columnName;
+        change.newColumnName = newColumnName;
+        change.dataType = dataType;
+        change.comment = comment;
+        return change;
+    }
+
     public Action getAction() {
         return action;
     }

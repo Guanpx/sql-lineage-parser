@@ -2,7 +2,9 @@ package com.magic.core.parser.sql.alter;
 
 import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.expr.SQLCharExpr;
+import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlAlterTableModifyColumn;
 import com.alibaba.druid.sql.ast.statement.SQLAlterTableAddColumn;
+import com.alibaba.druid.sql.ast.statement.SQLAlterTableAlterColumn;
 import com.alibaba.druid.sql.ast.statement.SQLAlterTableDropColumnItem;
 import com.alibaba.druid.sql.ast.statement.SQLAlterTableItem;
 import com.alibaba.druid.sql.ast.statement.SQLAlterTableRenameColumn;
@@ -19,7 +21,8 @@ import java.util.logging.Logger;
  * ALTER TABLE 语句解析器
  * <p>
  * 解析 Hive / 标准 SQL 的 ALTER TABLE 语句，支持
- * ADD COLUMNS / DROP COLUMN / RENAME COLUMN / CHANGE COLUMN 等结构变更
+ * ADD COLUMNS / DROP COLUMN / RENAME COLUMN / CHANGE COLUMN 等结构变更。
+     * CHANGE COLUMN 在结果模型中统一表达为 MODIFY 动作。
  *
  * @author Guan Peixiang
  * @since 2026/05/19
@@ -77,6 +80,31 @@ public final class SqlAlterTableParser {
             String oldName = stripIdentifier(rename.getColumn().getSimpleName());
             String newName = stripIdentifier(rename.getTo().getSimpleName());
             info.addChange(AlterColumnChange.ofRename(oldName, newName));
+        } else if (item instanceof SQLAlterTableAlterColumn alterColumn
+                && alterColumn.getColumn() != null) {
+            SQLColumnDefinition column = alterColumn.getColumn();
+            String oldName = alterColumn.getOriginColumn() == null
+                    ? null
+                    : stripIdentifier(alterColumn.getOriginColumn().getSimpleName());
+            String newName = stripIdentifier(column.getName().getSimpleName());
+            String type = column.getDataType() == null ? null : column.getDataType().toString();
+            boolean renamed = oldName != null && !oldName.equals(newName);
+
+            info.addChange(AlterColumnChange.ofModify(
+                    renamed ? oldName : newName,
+                    renamed ? newName : null,
+                    type,
+                    extractComment(column)
+            ));
+        } else if (item instanceof MySqlAlterTableModifyColumn modifyColumn
+                && modifyColumn.getNewColumnDefinition() != null) {
+            SQLColumnDefinition column = modifyColumn.getNewColumnDefinition();
+            info.addChange(AlterColumnChange.ofModify(
+                    stripIdentifier(column.getName().getSimpleName()),
+                    null,
+                    column.getDataType() == null ? null : column.getDataType().toString(),
+                    extractComment(column)
+            ));
         } else {
             LOGGER.log(Level.FINE, () -> "未识别的 ALTER 子项: " + item.getClass().getSimpleName());
         }

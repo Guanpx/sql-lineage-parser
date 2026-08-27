@@ -339,6 +339,92 @@ class SqlLineageParserTest {
             assertNotNull(info.getTableName());
             assertFalse(info.getChanges().isEmpty());
         }
+
+        @Test
+        @DisplayName("CHANGE COLUMN 映射为 MODIFY 并保留新旧列名")
+        void testAlterChangeColumn() {
+            String sql = SqlFileReader.readAlterSql("sqlAlterChangeColumn01.sql");
+            var info = SqlLineageParser.parserAlterTableSql(sql);
+
+            assertNotNull(info);
+            assertEquals("dw.orders", info.getQualifiedTableName());
+            assertEquals(1, info.getChanges().size());
+
+            var change = info.getChanges().get(0);
+            assertEquals(com.magic.sqllineageparser.model.AlterColumnChange.Action.MODIFY,
+                    change.getAction());
+            assertEquals("amount", change.getColumnName());
+            assertEquals("order_amount", change.getNewColumnName());
+            assertEquals("DECIMAL(18, 2)", change.getDataType());
+            assertEquals("订单金额", change.getComment());
+        }
+
+        @Test
+        @DisplayName("MODIFY COLUMN 解析为 MODIFY 动作")
+        void testAlterModifyColumn() {
+            String sql = SqlFileReader.readAlterSql("sqlAlterModifyColumn01.sql");
+            var info = SqlLineageParser.parserAlterTableSql(sql);
+
+            assertNotNull(info);
+            assertEquals("dw.orders", info.getQualifiedTableName());
+            assertEquals(1, info.getChanges().size());
+
+            var change = info.getChanges().get(0);
+            assertEquals(com.magic.sqllineageparser.model.AlterColumnChange.Action.MODIFY,
+                    change.getAction());
+            assertEquals("amount", change.getColumnName());
+            assertNull(change.getNewColumnName());
+            assertEquals("DECIMAL(18, 2)", change.getDataType());
+            assertEquals("订单金额", change.getComment());
+        }
+    }
+
+    @Nested
+    @DisplayName("CREATE TABLE 纯 DDL 测试")
+    class CreateTableDdlTest {
+
+        @Test
+        @DisplayName("解析 CREATE TABLE 表字段元信息")
+        void testCreateTableColumnMetadata() {
+            String sql = SqlFileReader.readCreateTableSql("sqlCreateTable01.sql");
+            var info = SqlLineageParser.parserCreateTableDdlSql(sql);
+
+            assertNotNull(info);
+            assertEquals("dw", info.getSchema());
+            assertEquals("user_profile", info.getTableName());
+            assertEquals("dw.user_profile", info.getQualifiedTableName());
+            assertEquals("用户画像表", info.getComment());
+            assertEquals(3, info.getColumns().size());
+
+            var userId = info.getColumns().get(0);
+            assertEquals("user_id", userId.getColumnName());
+            assertEquals("BIGINT", userId.getDataType());
+            assertEquals("用户ID", userId.getComment());
+
+            var amount = info.getColumns().get(2);
+            assertEquals("DECIMAL(18, 2)", amount.getDataType());
+            assertEquals("0", amount.getDefaultValue());
+        }
+
+        @Test
+        @DisplayName("解析 CREATE TABLE 分区字段")
+        void testCreateTablePartitionColumns() {
+            String sql = SqlFileReader.readCreateTableSql("sqlCreateTable01.sql");
+            var info = SqlLineageParser.parserCreateTableDdlSql(sql);
+
+            assertNotNull(info);
+            assertEquals(2, info.getPartitionColumns().size());
+            assertEquals("dt", info.getPartitionColumns().get(0).getColumnName());
+            assertEquals("STRING", info.getPartitionColumns().get(0).getDataType());
+            assertEquals("业务日期", info.getPartitionColumns().get(0).getComment());
+        }
+
+        @Test
+        @DisplayName("CTAS 不走纯 DDL 元信息入口")
+        void testCreateTableDdlRejectsCtas() {
+            String sql = "CREATE TABLE t AS SELECT id FROM users";
+            assertNull(SqlLineageParser.parserCreateTableDdlSql(sql));
+        }
     }
 
     @Nested

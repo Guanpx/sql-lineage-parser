@@ -16,7 +16,7 @@
 - **多种表源解析**: 普通表、JOIN、子查询、UNION、CTE (WITH)、LATERAL VIEW
 - **虚拟表列下钻**: CTE / 子查询作为 FROM 表源时，外层 `alias.col` 自动下钻到真实底表列
 - **DML 血缘**: INSERT INTO / INSERT OVERWRITE + PARTITION、CREATE TABLE AS SELECT、CREATE VIEW
-- **DDL 解析**: ALTER TABLE ADD/DROP/RENAME COLUMN、CREATE VIEW AS SELECT，提取字段、类型、注释
+- **DDL 解析**: 纯 CREATE TABLE、CREATE VIEW AS SELECT、ALTER TABLE ADD/DROP/RENAME/MODIFY/CHANGE COLUMN，提取字段、类型、注释、默认值和分区字段
 - **树形结构输出**: 直观的血缘树结构，便于遍历和分析
 - **类型安全的密封接口**: 基于 Java 17 `sealed interface` 限制并管理解析器实现类
 - **模块化设计**: 表达式 / 表源 / DML / DDL 解析器按类型独立成文件，易于扩展新语法
@@ -134,10 +134,23 @@ DmlLineageInfo view = SqlLineageParser.parserCreateViewSql(
 DmlLineageInfo any = SqlLineageParser.parserDmlSql(insertSql);
 ```
 
-#### 4. ALTER 语句解析
+#### 4. DDL 语句解析
 
 ```java
 import com.magic.sqllineageparser.model.AlterTableInfo;
+import com.magic.sqllineageparser.model.CreateTableInfo;
+
+// 纯 CREATE TABLE：提取表注释、字段、类型、注释、默认值与分区字段
+String createSql = """
+    CREATE TABLE dw.user_profile (
+      user_id BIGINT COMMENT '用户ID',
+      amount DECIMAL(18, 2) DEFAULT 0
+    ) COMMENT '用户画像表'
+    PARTITIONED BY (dt STRING)
+    """;
+CreateTableInfo table = SqlLineageParser.parserCreateTableDdlSql(createSql);
+System.out.println(table.getQualifiedTableName()); // dw.user_profile
+System.out.println(table.getColumns().get(0).getComment()); // 用户ID
 
 String alterSql = "ALTER TABLE warehouse.orders ADD COLUMNS (status string COMMENT '订单状态')";
 AlterTableInfo info = SqlLineageParser.parserAlterTableSql(alterSql);
@@ -163,7 +176,7 @@ DML 场景下 `DmlLineageInfo` 在血缘树之上额外携带：
 
 ```
 DmlLineageInfo
-├── operation        : INSERT_INTO | INSERT_OVERWRITE | CTAS
+├── operation        : INSERT_INTO | INSERT_OVERWRITE | CTAS | CREATE_VIEW
 ├── targetSchema     : dw
 ├── targetTable      : daily_order
 ├── targetColumns    : [order_id, user_id, amount]  (显式或回退到 SELECT alias)
@@ -178,6 +191,7 @@ DmlLineageInfo
 | `parserSingleSelectSql(sql)` | SELECT / UNION / WITH | `TreeNode<ColumnNode>` | 查询血缘 |
 | `parserInsertSql(sql)` | INSERT INTO / OVERWRITE | `DmlLineageInfo` | 数据写入血缘 |
 | `parserCreateTableSql(sql)` | CREATE TABLE [AS SELECT] | `DmlLineageInfo` (非 CTAS 返回 null) | 建表 + 数据流 |
+| `parserCreateTableDdlSql(sql)` | 不带 AS SELECT 的 CREATE TABLE | `CreateTableInfo` | 表结构元信息 |
 | `parserDmlSql(sql)` | INSERT / CTAS / CREATE VIEW | `DmlLineageInfo` | DML/DDL 统一入口 |
 | `parserCreateViewSql(sql)` | CREATE VIEW [AS SELECT] | `DmlLineageInfo` | 视图血缘 |
 | `parserAlterTableSql(sql)` | ALTER TABLE | `AlterTableInfo` | 表结构变更 |
@@ -190,12 +204,13 @@ sql-lineage-parser/
 ├── src/main/java/com/magic/
 │   ├── core/
 │   │   ├── parser/
-│   │   │   ├── SqlLineageParser.java           # 血缘解析核心入口（SELECT / UNION / CTE / ALTER / DML）
+│   │   │   ├── SqlLineageParser.java           # 血缘解析核心入口（SELECT / UNION / CTE / DML / DDL）
 │   │   │   └── sql/
 │   │   │       ├── alter/                      # DDL 解析器
 │   │   │       │   └── SqlAlterTableParser.java
-│   │   │       ├── ddl/                        # DDL 解析器（视图等）
+│   │   │       ├── ddl/                        # DDL 解析器（纯建表 / 视图等）
 │   │   │       │   └── SqlCreateViewParser.java
+│   │   │       │   └── SqlCreateTableParser.java
 │   │   │       ├── dml/                        # DML 解析器
 │   │   │       │   ├── SqlInsertParser.java
 │   │   │       │   └── SqlCreateTableAsParser.java
@@ -238,13 +253,16 @@ sql-lineage-parser/
 │       ├── ColumnNode.java                     # 列节点模型
 │       ├── AlterTableInfo.java                 # ALTER 解析结果
 │       ├── AlterColumnChange.java              # 单列变更项
-│       ├── DmlLineageInfo.java                 # DML 解析结果（INSERT / CTAS）
+│       ├── CreateTableInfo.java                # 纯建表解析结果
+│       ├── TableColumnMeta.java                # 建表字段元信息
+│       ├── DmlLineageInfo.java                 # DML/DDL 血缘解析结果（INSERT / CTAS / CREATE VIEW）
 │       └── DmlOperation.java                   # DML 操作类型枚举
 ├── src/test/                                   # 测试代码
 ├── sqls/                                       # SQL 测试用例库
 │   ├── sqlAlter/                               # ALTER 语句
 │   ├── sqlCase/                                # CASE WHEN 语句
 │   ├── sqlCtas/                                # CTAS 语句
+│   ├── sqlCreateTable/                         # 纯 CREATE TABLE 语句
 │   ├── sqlFunction/                            # 函数 / 窗口函数语句
 │   ├── sqlInsert/                              # INSERT 语句
 │   ├── sqlJoin/                                # JOIN 语句
@@ -253,7 +271,7 @@ sql-lineage-parser/
 │   ├── sqlUnion/                               # UNION 语句
 │   └── sqlView/                                # CREATE VIEW 语句
 ├── RELEASE.md                                  # 版本规划文档
-├── UPDATE_CLAUDE.md                            # 变更记录
+├── UPDATE_DEV.md                               # 开发操作记录
 └── pom.xml
 ```
 
@@ -305,8 +323,10 @@ repo.close();
 | **ColumnNode** | 列节点：列名、别名、来源列、表达式、是否常量 |
 | **AlterTableInfo** | ALTER 解析结果：目标表 + 列变更列表 |
 | **AlterColumnChange** | 单列变更项：ADD / DROP / RENAME / MODIFY |
+| **CreateTableInfo** | 纯 CREATE TABLE 解析结果：目标表 + 表注释 + 字段与分区字段元信息 |
+| **TableColumnMeta** | 建表字段元信息：字段名、类型、注释、默认值、主键标记 |
 | **DmlLineageInfo** | DML 解析结果：操作类型 / 目标表 / 目标列 / 分区 / 源 SELECT 血缘 |
-| **DmlOperation** | DML 操作枚举：INSERT_INTO / INSERT_OVERWRITE / CTAS |
+| **DmlOperation** | DML 操作枚举：INSERT_INTO / INSERT_OVERWRITE / CTAS / CREATE_VIEW |
 
 ### 支持的表达式类型
 
@@ -347,11 +367,11 @@ repo.close();
 | 窗口函数 | ✅ 已支持 | ROW_NUMBER/RANK/LAG/LEAD + PARTITION BY/ORDER BY |
 | LATERAL VIEW | ✅ 已支持 | Hive 行转列，输出列下钻到 UDTF 输入列 |
 | CAST 类型转换 | ✅ 已支持 | 递归下钻到内部表达式 |
-| ALTER 语句 | ✅ 已支持 | ADD COLUMNS / DROP COLUMN / RENAME COLUMN |
+| ALTER 语句 | ✅ 已支持 | ADD COLUMNS / DROP COLUMN / RENAME COLUMN / CHANGE COLUMN / MODIFY COLUMN |
 | INSERT 语句 | ✅ 已支持 | INSERT INTO / OVERWRITE + PARTITION，含目标列对齐 |
 | CTAS 语句 | ✅ 已支持 | CREATE TABLE AS SELECT |
 | CREATE VIEW 语句 | ✅ 已支持 | 视图定义列血缘，支持显式列覆盖 |
-| CREATE 语句 | 📋 计划中 | 完整 DDL 支持 |
+| CREATE TABLE 语句 | ✅ 已支持 | 纯 DDL 字段元信息；CTAS 另走数据血缘入口 |
 
 ## 版本规划
 
@@ -362,7 +382,7 @@ repo.close();
 | v0.1.0 | 基础 SELECT 解析 | ✅ 已完成 |
 | v0.2.0 | 查询增强 / UNION / CTE / 窗口函数 / LATERAL VIEW / ALTER | ✅ 已完成 |
 | v0.3.0 | DML 支持（INSERT INTO/OVERWRITE / CTAS） | ✅ 已完成 |
-| v0.4.0 | DDL 支持（CREATE VIEW / CREATE TABLE / DROP） | 🚧 当前 |
+| v0.4.0 | DDL 支持（CREATE VIEW / CREATE TABLE / ALTER 增强） | ✅ 已完成（DROP 暂不开发） |
 | v0.5.0 | 血缘输出增强（JSON/DOT） | 📋 计划中 |
 | v1.0.0 | 生产就绪版本 | 📋 计划中 |
 
@@ -424,38 +444,58 @@ v0.3.0 在 v0.2.0 查询能力之上新增 DML 解析，建立从源表到目标
 | DML 模型 | **目标列三级兜底** | 显式列 → SELECT alias → 从 expression 提取列名（处理 `t.col` 无 alias 场景） |
 | 测试 | **DML 测试** | `InsertStatementTest` 4 用例 + `CtasTest` 3 用例，覆盖 INSERT INTO/OVERWRITE/PARTITION/CTAS/统一入口 |
 
-#### 计划中 📋
+#### 暂缓 🚫
 
 | 特性 | 说明 |
 |------|------|
 | MERGE INTO | UPSERT 场景，识别源表与目标表的字段匹配规则 |
 | 多语句脚本解析 | 一次解析多条 DML 语句，输出语句序列的血缘集合 |
 
+### v0.4.0 功能详情
+
+v0.4.0 聚焦 DDL 元信息与结构变更能力。按当前开发决策，DROP TABLE / VIEW 识别暂不开发。
+
+#### 已交付特性 ✅
+
+| 类别 | 特性 | 说明 |
+|------|------|------|
+| DDL 入口 | **`parserCreateTableDdlSql`** | 解析不带 AS SELECT 的 CREATE TABLE，返回 `CreateTableInfo` |
+| DDL 解析 | **纯 CREATE TABLE** | 提取 schema、表名、表注释、字段名、类型、注释、默认值、主键标记与分区字段 |
+| DDL 解析 | **CREATE VIEW** | 解析视图定义列血缘，支持显式列覆盖 |
+| DDL 解析 | **ALTER CHANGE COLUMN** | 映射为 `MODIFY` 动作，保留原列名、新列名、类型与注释 |
+| DDL 解析 | **ALTER MODIFY COLUMN** | Druid Hive 缺少独立分支时使用窄范围 MySQL AST 兼容解析，同样输出 `MODIFY` 动作 |
+| DDL 模型 | **`CreateTableInfo` / `TableColumnMeta`** | 与 CTAS 的 `DmlLineageInfo` 分离，避免把元信息和数据血缘混在同一模型 |
+| 测试 | **DDL 测试** | 新增 5 个用例，覆盖纯建表、分区字段、CTAS 边界、CHANGE COLUMN、MODIFY COLUMN |
+
+#### 暂缓 🚫
+
+| 特性 | 说明 |
+|------|------|
+| DROP TABLE / VIEW 识别 | 用户确认本轮不开发；后续如做需处理血缘失效与删除语义 |
+
 ## 开发状态
 
-项目处于 v0.4.0 开发阶段（CREATE VIEW 已交付）。已交付能力：
+项目处于 v0.4.0 已交付状态（DROP 按当前决策暂不开发）。已交付能力：
 
 - ✅ 完整的核心解析框架（表达式 + 表源 双密封接口）
 - ✅ 解析上下文 ExprParseContext，列血缘自动收集与下钻
 - ✅ 表别名 → 真实表名自动还原；单表 FROM 裸列推断
 - ✅ UNION / CTE / 嵌套子查询 完整血缘解析
 - ✅ 窗口函数（OVER 子句）/ LATERAL VIEW / CAST 表达式
-- ✅ ALTER TABLE 解析（ADD/DROP/RENAME COLUMN）
+- ✅ ALTER TABLE 解析（ADD/DROP/RENAME/MODIFY/CHANGE COLUMN）
 - ✅ INSERT INTO / INSERT OVERWRITE + PARTITION 解析
-- ✅ CREATE TABLE AS SELECT 解析；CREATE VIEW 解析
+- ✅ CREATE TABLE AS SELECT 解析；纯 CREATE TABLE 字段元信息解析；CREATE VIEW 解析
 - ✅ 统一 DML/DDL 入口（INSERT / CTAS / CREATE VIEW）
 - ✅ 持久化模块预留（Neo4j / Nebula 双实现）
-- ✅ **82 个单元测试用例**，覆盖 SELECT / UNION / CTE / 子查询 / 窗口函数 / LATERAL VIEW / ALTER / INSERT / CTAS / CREATE VIEW 等场景
-- ✅ 生产级复杂 SQL 验证（sqlProd01.sql / sqlWindow01.sql / sqlCte01.sql / sqlInsert*.sql / sqlCtas01.sql / sqlView*.sql）
+- ✅ **87 个单元测试用例**，覆盖 SELECT / UNION / CTE / 子查询 / 窗口函数 / LATERAL VIEW / ALTER / INSERT / CTAS / CREATE VIEW / 纯 CREATE TABLE 等场景
+- ✅ 生产级复杂 SQL 验证（sqlProd01.sql / sqlWindow01.sql / sqlCte01.sql / sqlInsert*.sql / sqlCtas01.sql / sqlView*.sql / sqlCreateTable01.sql）
 - ✅ 调试工具集（SqlLineageParserDebug 等）
 
-v0.4.0 余项：
+v0.4.0 暂缓项：
 
-- CREATE TABLE（纯 DDL，提取字段元信息）
-- DROP TABLE/VIEW 识别
-- ALTER 增强（MODIFY / CHANGE COLUMN）
+- DROP TABLE/VIEW 识别（用户确认不开发）
 
-v0.3.0 余项：
+v0.3.0 暂缓项：
 
 - MERGE INTO 语句解析
 - 多语句批量脚本解析

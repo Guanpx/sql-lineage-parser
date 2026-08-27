@@ -22,7 +22,7 @@
 |------|------|--------|
 | CREATE TABLE | 表结构定义，字段元信息提取 | P1 |
 | CREATE VIEW | 视图定义，透明化视图血缘 | P1 |
-| ALTER TABLE | 字段变更追踪（ADD/DROP/RENAME COLUMN） | P2 |
+| ALTER TABLE | 字段变更追踪（ADD/DROP/RENAME/MODIFY/CHANGE COLUMN） | P2 |
 | COMMENT | 字段注释提取 | P2 |
 
 ### 3. 表达式处理
@@ -82,12 +82,12 @@
 ## 二、当前项目状态评估
 
 > 本节为「能力模型」与「当前代码」之间的快照对照，更细粒度的版本进度见第三节。
-> 当前版本：**v0.3.0**（DML 已交付，MERGE INTO / 多语句脚本开发中）。
+> 当前版本：**v0.4.0**（DDL 已按当前范围交付；DROP 与 v0.3.0 余项暂不开发）。
 
 ### 已完成 ✅
 
 - [x] 项目基础架构搭建
-- [x] 数据模型定义（TreeNode, ColumnNode, TableNode, AlterTableInfo, DmlLineageInfo）
+- [x] 数据模型定义（TreeNode, ColumnNode, TableNode, AlterTableInfo, CreateTableInfo, DmlLineageInfo）
 - [x] 单表 SELECT 解析
 - [x] JOIN 查询解析
 - [x] 子查询解析（SQLSubqueryTableSource，支持外层 alias.col 下钻）
@@ -97,7 +97,7 @@
 - [x] 二元运算表达式解析
 - [x] 常量表达式处理
 - [x] 单元测试框架
-- [x] 测试用例库（78 个 @Test 用例）
+- [x] 测试用例库（87 个 @Test 用例）
 - [x] **表达式解析器模块化** - `BaseSqlExprParser` 密封接口 + 11 个独立 ExprParser 文件
 - [x] **表源解析器模块化** - `BaseTableSourceParser` 密封接口 + 6 个 TableSourceParser 文件
 - [x] **解析上下文** - ExprParseContext（别名映射、目标列、来源列收集、虚拟表下钻）
@@ -109,19 +109,21 @@
 - [x] **窗口函数 (OVER)** - PARTITION BY / ORDER BY / SORT BY / DISTRIBUTE BY / CLUSTER BY 列引用全收集
 - [x] **LATERAL VIEW** - 行转列输出列映射到 UDTF 输入列
 - [x] **CAST 表达式** - 递归下钻到内部表达式
-- [x] **ALTER TABLE 解析** - ADD COLUMNS / DROP COLUMN / RENAME COLUMN
+- [x] **ALTER TABLE 解析** - ADD COLUMNS / DROP COLUMN / RENAME COLUMN / MODIFY COLUMN / CHANGE COLUMN
 - [x] **INSERT INTO / OVERWRITE 解析** - 目标表 + 显式目标列 + PARTITION + 源 SELECT 血缘
 - [x] **CREATE TABLE AS SELECT (CTAS) 解析**
+- [x] **CREATE TABLE 纯 DDL 解析** - 表注释、字段、类型、注释、默认值、主键标记与分区字段元信息
 - [x] **CREATE VIEW 解析** - 视图定义的列血缘 + 显式列覆盖
 - [x] **统一 DML 入口** - `parserDmlSql` 自动识别 INSERT / CTAS / CREATE VIEW
 - [x] **血缘持久化模块** - persistence 包（实体、Repository 接口）
 - [x] **Neo4j 持久化** - Neo4jLineageRepository（Cypher 预留）
 - [x] **Nebula 持久化** - NebulaLineageRepository（nGQL 预留）
 
-### 开发中 🚧
+### 暂缓 🚫
 
-- [ ] MERGE INTO 语句解析（UPSERT 场景）
-- [ ] 多语句脚本解析（批量 SQL 拆分与依赖）
+- [ ] MERGE INTO 语句解析（UPSERT 场景；用户确认不继续开发）
+- [ ] 多语句脚本解析（批量 SQL 拆分与依赖；用户确认不继续开发）
+- [ ] DROP TABLE / VIEW 识别（用户确认不开发）
 - [ ] Java 17 升级后特性的持续应用（pattern matching / sealed interface）
 
 ### 缺失功能 ❌
@@ -130,11 +132,6 @@
 
 | 功能 | 重要性 | 说明 |
 |------|--------|------|
-| MERGE INTO 解析 | P1 | UPSERT 场景的 source/target 字段匹配（v0.3.0 余项） |
-| 多语句解析 | P1 | 批量 SQL 脚本（v0.3.0 余项） |
-| CREATE TABLE 纯 DDL | P1 | 字段元信息提取（v0.4.0） |
-| DROP 语句识别 | P2 | DROP TABLE/VIEW 血缘失效（v0.4.0） |
-| ALTER MODIFY/CHANGE | P2 | Hive 的 MODIFY COLUMN / CHANGE COLUMN（v0.4.0） |
 | SELECT * 展开 | P1 | 通配符需要元数据支持才能展开 |
 
 #### 输出能力缺失
@@ -202,7 +199,7 @@
 - [ ] SELECT \* 字段展开（需元数据支持）
 - [ ] 多语句批量解析
 
-### v0.3.0 - DML 支持版本 (Current 🚧)
+### v0.3.0 - DML 支持版本 (✅)
 
 **目标**: 支持数据操作语句，建立完整数据流（源表 → 目标表）
 
@@ -217,24 +214,26 @@
 - [x] **DML 血缘模型** - `DmlLineageInfo` / `DmlOperation`，含目标列名兜底（显式列 → SELECT alias → 表达式列名）
 - [x] **DML 测试用例** - sqlInsert / sqlCtas / sqlView 目录 + 11 个 @Test 用例
 
-#### 计划中 📋
+#### 暂缓 🚫
 
 - [ ] MERGE INTO 语句解析
 - [ ] 多语句批量解析（脚本级 SQL 拆分与依赖）
 
-### v0.4.0 - DDL 支持版本
+### v0.4.0 - DDL 支持版本 (Current ✅)
 
 **目标**: 支持表结构定义语句
 
 #### 已交付 ✅
 
 - [x] **CREATE VIEW 解析** - `parserCreateViewSql` 解析视图定义的列血缘，支持显式列覆盖；纳入统一 DML 入口 `parserDmlSql`
+- [x] **CREATE TABLE 纯 DDL 解析** - `parserCreateTableDdlSql` 提取表与字段元信息，支持表注释、字段类型、字段注释、默认值、主键标记与分区字段
+- [x] **ALTER TABLE 字段变更追踪** - `CHANGE COLUMN` / `MODIFY COLUMN` 统一映射为 `MODIFY` 动作，保留新旧列名、类型与注释
+- [x] **DDL 元信息模型** - `CreateTableInfo` / `TableColumnMeta`，与 CTAS 数据血缘模型 `DmlLineageInfo` 分离
+- [x] **DDL 测试** - sqlCreateTable / sqlAlter 新增 5 个用例，累计 87 个 @Test 全部通过
 
-#### 计划中 📋
+#### 暂缓 🚫
 
-- [ ] CREATE TABLE 解析（提取字段元信息）
-- [ ] ALTER TABLE 字段变更追踪（MODIFY/CHANGE COLUMN 等 Hive 扩展）
-- [ ] DROP 语句识别
+- [ ] DROP TABLE / VIEW 语句识别（用户确认不开发）
 
 ### v0.5.0 - 输出增强版本
 
@@ -391,11 +390,11 @@ case SQLOver over -> {
 | INSERT | 15+ | ✅ 已覆盖（INSERT INTO / OVERWRITE / PARTITION） |
 | CTAS | 5+ | ✅ 已覆盖 |
 | CREATE VIEW | 5+ | ✅ 已覆盖（基本 + 显式列覆盖 + 统一入口） |
-| ALTER | 5+ | ✅ 已覆盖 |
-| DDL（CREATE TABLE/DROP） | 20+ | ❌ 待添加（v0.4.0） |
+| ALTER | 5+ | ✅ 已覆盖（ADD / DROP / RENAME / CHANGE / MODIFY） |
+| DDL（CREATE TABLE） | 5+ | ✅ 已覆盖（字段元信息 / 分区字段 / CTAS 边界；DROP 暂缓） |
 | 生产复杂 SQL | 10+ | ✅ 已覆盖 |
 
-> 当前 @Test 总数：**82**（截至 v0.4.0 CREATE VIEW）。
+> 当前 @Test 总数：**87**（截至 v0.4.0 纯 CREATE TABLE 与 ALTER 增强）。
 
 ---
 
@@ -427,5 +426,5 @@ case SQLOver over -> {
 
 ---
 
-*文档版本: v1.6*
-*更新时间: 2026-07-07*
+*文档版本: v1.7*
+*更新时间: 2026-08-26*

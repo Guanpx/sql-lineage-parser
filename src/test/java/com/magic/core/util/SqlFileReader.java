@@ -94,6 +94,13 @@ public final class SqlFileReader {
     }
 
     /**
+     * 读取纯 CREATE TABLE 语句 SQL 文件
+     */
+    public static String readCreateTableSql(String fileName) {
+        return readSqlFile("sqlCreateTable/" + fileName);
+    }
+
+    /**
      * 读取SELECT 子目录下的 SQL 文件 (含 CTE 等)
      *
      * @param fileName 文件名

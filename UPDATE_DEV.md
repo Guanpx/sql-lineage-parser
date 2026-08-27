@@ -1,5 +1,62 @@
 # UPDATE_DEV.md - 变更记录
 
+## 2026-08-26 完成 v0.4.0 可开发余项（CREATE TABLE 纯 DDL / ALTER 增强）
+
+### 操作背景
+
+按用户本轮决策推进版本余项：
+
+- v0.3.0 的 MERGE INTO 与多语句脚本解析不继续开发；
+- v0.4.0 的 DROP TABLE / VIEW 识别不开发；
+- 其余余项全部开发，即纯 CREATE TABLE 字段元信息解析与 ALTER TABLE MODIFY / CHANGE COLUMN。
+
+### 新增能力
+
+| 能力 | 关键实现 | 测试 |
+|------|----------|------|
+| 纯 CREATE TABLE 元信息 | 新增 `CreateTableInfo` / `TableColumnMeta` / `SqlCreateTableParser`，提取表名、表注释、字段、类型、注释、默认值、主键标记与分区字段 | `CreateTableDdlTest` 3 用例 |
+| 纯建表入口 | `SqlLineageParser.parserCreateTableDdlSql(sql)`；CTAS 仍走 `parserCreateTableSql` 并保持非 CTAS 返回 null | `testCreateTableDdlRejectsCtas` |
+| ALTER CHANGE COLUMN | Druid `SQLAlterTableAlterColumn` 映射为 `AlterColumnChange.Action.MODIFY`，保留原列名、新列名、类型与注释 | `testAlterChangeColumn` |
+| ALTER MODIFY COLUMN | Druid Hive 方言无独立 MODIFY 分支；仅当 Hive 解析失败且 MySQL AST 明确产出 `MySqlAlterTableModifyColumn` 时窄范围回退解析 | `testAlterModifyColumn` |
+
+### 关键文件
+
+新增：
+```
+src/main/java/com/magic/sqllineageparser/model/CreateTableInfo.java
+src/main/java/com/magic/sqllineageparser/model/TableColumnMeta.java
+src/main/java/com/magic/core/parser/sql/ddl/SqlCreateTableParser.java
+sqls/sqlCreateTable/sqlCreateTable01.sql
+sqls/sqlAlter/sqlAlterChangeColumn01.sql
+sqls/sqlAlter/sqlAlterModifyColumn01.sql
+```
+
+修改：
+```
+src/main/java/com/magic/core/parser/SqlLineageParser.java
+src/main/java/com/magic/core/parser/sql/alter/SqlAlterTableParser.java
+src/main/java/com/magic/sqllineageparser/model/AlterColumnChange.java
+src/test/java/com/magic/core/parser/SqlLineageParserTest.java
+src/test/java/com/magic/core/util/SqlFileReader.java
+README.md
+RELEASE.md
+```
+
+### 实现要点
+
+- **模型边界**：纯 CREATE TABLE 是结构元信息，返回 `CreateTableInfo`；CTAS / CREATE VIEW 是带源 SELECT 的数据血缘，继续返回 `DmlLineageInfo`，不混用模型。
+- **旧入口兼容**：`parserCreateTableSql` 继续只解析 CTAS，纯 DDL 返回 null，既有行为不变。
+- **CHANGE 语义**：Hive `CHANGE COLUMN old new TYPE COMMENT` 在 Druid 中解析为 `SQLAlterTableAlterColumn`，`originColumn` 为 old，`column` 为新定义；输出统一为 `MODIFY` 动作。
+- **MODIFY 兼容层**：先按 Hive 方言解析；仅当失败后 MySQL 方言产出 `MySqlAlterTableModifyColumn` 才回退，其他非法 SQL 仍抛出原 Hive 解析异常。
+
+### 验证
+
+- `mvn test` BUILD SUCCESS
+- 87 个 @Test 全部通过（此前 82 个 + 新增 5 个）
+- 既有 SELECT / DML / CTAS / CREATE VIEW 用例无回归
+
+---
+
 ## 2026-07-07 新增 CREATE VIEW 解析（v0.4.0 DDL 首项）
 
 ### 概述
