@@ -96,6 +96,35 @@ class SqlLineageParserTest {
             assertNotNull(result);
             assertNotNull(result.getChildren());
         }
+
+        @Test
+        @DisplayName("简单 CASE 的操作数列纳入血缘 (P1 回归)")
+        void testSimpleCaseOperandCollected() {
+            String sql = "SELECT CASE dept WHEN 1 THEN 'a' ELSE 'b' END AS c FROM emp";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode col = result.getChildren().get(0).getValue();
+            // CASE 操作数 dept 必须作为来源列被收集
+            assertTrue(col.getSourceColumns().stream()
+                            .anyMatch(s -> "emp".equals(s.getTableName()) && "dept".equals(s.getName())),
+                    "简单 CASE 操作数 dept 应作为来源列");
+        }
+
+        @Test
+        @DisplayName("搜索型 CASE 的 WHEN 条件列纳入血缘 (P1 回归)")
+        void testSearchedCaseConditionCollected() {
+            String sql = "SELECT CASE WHEN status='X' THEN amount ELSE 0 END AS c FROM orders";
+            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            assertNotNull(result);
+            ColumnNode col = result.getChildren().get(0).getValue();
+            // WHEN 条件列 status 与 THEN 取值列 amount 都应被收集
+            assertTrue(col.getSourceColumns().stream()
+                            .anyMatch(s -> "orders".equals(s.getTableName()) && "status".equals(s.getName())),
+                    "WHEN 条件列 status 应作为来源列");
+            assertTrue(col.getSourceColumns().stream()
+                            .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())),
+                    "THEN 取值列 amount 应作为来源列");
+        }
     }
 
     @Nested

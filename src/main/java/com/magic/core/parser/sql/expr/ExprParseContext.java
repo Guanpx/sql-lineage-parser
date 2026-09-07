@@ -218,15 +218,23 @@ public class ExprParseContext {
             }
         }
         if (cols == null) {
+            // 不是虚拟表，交给普通逻辑（按 alias -> 真实表名 还原）
             return false;
         }
+        // 已确认命中虚拟表：能下钻则展开到真实来源列
         List<ColumnNode> realSources = cols.get(columnName);
-        if (realSources == null || realSources.isEmpty()) {
-            return false;
+        if (realSources != null && !realSources.isEmpty()) {
+            for (ColumnNode src : realSources) {
+                recordSource(cloneColumn(src));
+            }
+            return true;
         }
-        for (ColumnNode src : realSources) {
-            recordSource(cloneColumn(src));
-        }
+        // 命中虚拟表但列名无法下钻（列不在暴露列中 / 该列可见名未能提取，如 SELECT *）：
+        // 记录为未解析列（tableName=null），避免把虚拟表别名当作真实表名泄漏到血缘
+        ColumnNode unresolved = new ColumnNode();
+        unresolved.setName(columnName);
+        unresolved.setConstant(false);
+        recordSource(unresolved);
         return true;
     }
 

@@ -1,5 +1,45 @@
 # UPDATE_DEV.md - 变更记录
 
+## 2026-08-27 代码审查修复 P1 缺陷 + 归档 P2/P3
+
+### 概述
+
+对核心血缘解析链路做代码审查，发现并修复 2 个 P1 正确性缺陷；其余 P2/P3 问题归档到 `known-issues/` 并配套验证 SQL。测试从 87 增至 89（新增 2 个 P1 回归用例），`mvn test` 全绿。
+
+### P1 修复（本次已改代码）
+
+| 编号 | 缺陷 | 修复 | 验证 |
+|------|------|------|------|
+| P1-1 | CASE 表达式丢列：简单 CASE 操作数（`CASE dept WHEN...` 的 dept）与 WHEN 条件列（`WHEN status='X'` 的 status）从未被收集为来源 | `SqlCaseExprParser` 补充解析 `expr.getValueExpr()`（操作数）与 `item.getConditionExpr()`（条件） | `CaseWhenTest.testSimpleCaseOperandCollected` / `testSearchedCaseConditionCollected` |
+| P1-2 | 虚拟表下钻未命中列时泄漏别名：`WITH t AS(...) SELECT t.nonexist` 把 CTE 名 t 当真实表写入血缘 | `ExprParseContext.drillDownVirtual` 命中虚拟表但列名无法下钻时记录为未解析列（tableName=null），不再回落到别名 | 探针验证 `t.nonexist` 来源变为 table=null |
+
+### 修改文件
+
+```
+src/main/java/com/magic/core/parser/sql/expr/SqlCaseExprParser.java   # P1-1
+src/main/java/com/magic/core/parser/sql/expr/ExprParseContext.java     # P1-2
+src/test/java/com/magic/core/parser/SqlLineageParserTest.java          # 新增 2 个 CASE 回归用例
+```
+
+### 新增文件（P2/P3 问题归档）
+
+```
+known-issues/KNOWN_ISSUES.md                                          # 记录 8 个未修复问题（P2×3 + P3×5，含实际输出与建议）
+known-issues/sql/issue-p2-01-duplicate-source-columns.sql
+known-issues/sql/issue-p2-02-treenode-id-subtreesize.sql
+known-issues/sql/issue-p3-01-table-name-inconsistency.sql
+known-issues/sql/issue-p3-02-select-star-target-name.sql
+known-issues/sql/issue-p3-03-single-table-bare-column-misattribution.sql
+known-issues/sql/issue-p3-04-recursive-cte.sql
+```
+
+### 说明
+
+- P2/P3 问题（含 `TreeNode.getChildren` 可变性、CTE 重复解析性能等无 SQL 复现项）均在 `KNOWN_ISSUES.md` 列出位置、现象、实际输出与修复建议，待后续排期。
+- 本次为审查修复，未改变对外 API；`mvn test` BUILD SUCCESS，89 用例全绿。
+
+---
+
 ## 2026-08-26 完成 v0.4.0 可开发余项（CREATE TABLE 纯 DDL / ALTER 增强）
 
 ### 操作背景

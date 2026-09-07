@@ -32,9 +32,20 @@ public final class SqlCaseExprParser implements BaseSqlExprParser {
     public static void parse(SQLCaseExpr expr, ExprParseContext context) {
         LOGGER.fine("解析 CASE WHEN 表达式");
 
-        // 解析各个 WHEN 分支的值表达式
+        // 简单 CASE 的操作数（CASE <expr> WHEN ...）本身也是血缘来源列
+        if (expr.getValueExpr() != null) {
+            LOGGER.finer("解析 CASE 操作数");
+            BaseSqlExprParser.parserSqlExpr(expr.getValueExpr(), context);
+        }
+
+        // 解析各个 WHEN 分支
         for (SQLCaseExpr.Item item : expr.getItems()) {
-            LOGGER.log(Level.FINER, () -> "WHEN 条件: " + item.getConditionExpr());
+            // WHEN 条件表达式中的列引用也影响输出取值，纳入血缘来源
+            if (item.getConditionExpr() != null) {
+                LOGGER.log(Level.FINER, () -> "WHEN 条件: " + item.getConditionExpr());
+                BaseSqlExprParser.parserSqlExpr(item.getConditionExpr(), context);
+            }
+            // THEN 取值表达式
             BaseSqlExprParser.parserSqlExpr(item.getValueExpr(), context);
         }
 
