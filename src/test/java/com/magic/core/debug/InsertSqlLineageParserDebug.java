@@ -12,7 +12,7 @@ import com.magic.sqllineageparser.model.TreeNode;
  *
  * @author Debug
  */
-public class SqlLineageParserDebug {
+public class InsertSqlLineageParserDebug {
 
     public static void main(String[] args) {
         // 选择要调试的场景

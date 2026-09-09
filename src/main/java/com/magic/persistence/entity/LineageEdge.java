@@ -1,5 +1,8 @@
 package com.magic.persistence.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.Objects;
 
 /**
@@ -10,6 +13,8 @@ import java.util.Objects;
  * @author Guan Peixiang
  * @since 2023/12/20
  */
+@Setter
+@Getter
 public class LineageEdge {
 
     /**
@@ -58,62 +63,6 @@ public class LineageEdge {
     }
 
     // Getters and Setters
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getSourceNodeId() {
-        return sourceNodeId;
-    }
-
-    public void setSourceNodeId(String sourceNodeId) {
-        this.sourceNodeId = sourceNodeId;
-    }
-
-    public String getTargetNodeId() {
-        return targetNodeId;
-    }
-
-    public void setTargetNodeId(String targetNodeId) {
-        this.targetNodeId = targetNodeId;
-    }
-
-    public String getRelationshipType() {
-        return relationshipType;
-    }
-
-    public void setRelationshipType(String relationshipType) {
-        this.relationshipType = relationshipType;
-    }
-
-    public String getTransformExpression() {
-        return transformExpression;
-    }
-
-    public void setTransformExpression(String transformExpression) {
-        this.transformExpression = transformExpression;
-    }
-
-    public Long getCreateTime() {
-        return createTime;
-    }
-
-    public void setCreateTime(Long createTime) {
-        this.createTime = createTime;
-    }
-
-    public String getSqlId() {
-        return sqlId;
-    }
-
-    public void setSqlId(String sqlId) {
-        this.sqlId = sqlId;
-    }
 
     @Override
     public boolean equals(Object o) {

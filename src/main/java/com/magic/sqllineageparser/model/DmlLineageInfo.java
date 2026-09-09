@@ -1,5 +1,8 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -21,16 +24,22 @@ public class DmlLineageInfo {
     /**
      * 操作类型
      */
+    @Setter
+    @Getter
     private DmlOperation operation;
 
     /**
      * 目标表 schema
      */
+    @Setter
+    @Getter
     private String targetSchema;
 
     /**
      * 目标表名
      */
+    @Setter
+    @Getter
     private String targetTable;
 
     /**
@@ -50,31 +59,9 @@ public class DmlLineageInfo {
     /**
      * 源 SELECT 的血缘树根节点。children 为输出列。
      */
+    @Setter
+    @Getter
     private TreeNode<ColumnNode> sourceLineage;
-
-    public DmlOperation getOperation() {
-        return operation;
-    }
-
-    public void setOperation(DmlOperation operation) {
-        this.operation = operation;
-    }
-
-    public String getTargetSchema() {
-        return targetSchema;
-    }
-
-    public void setTargetSchema(String targetSchema) {
-        this.targetSchema = targetSchema;
-    }
-
-    public String getTargetTable() {
-        return targetTable;
-    }
-
-    public void setTargetTable(String targetTable) {
-        this.targetTable = targetTable;
-    }
 
     public List<String> getTargetColumns() {
         return Collections.unmodifiableList(targetColumns);
@@ -94,14 +81,6 @@ public class DmlLineageInfo {
         if (column != null) {
             partitions.put(column, value);
         }
-    }
-
-    public TreeNode<ColumnNode> getSourceLineage() {
-        return sourceLineage;
-    }
-
-    public void setSourceLineage(TreeNode<ColumnNode> sourceLineage) {
-        this.sourceLineage = sourceLineage;
     }
 
     /**

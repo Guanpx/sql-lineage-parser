@@ -1,5 +1,8 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * ALTER TABLE 单列变更项
  * <p>
@@ -8,6 +11,8 @@ package com.magic.sqllineageparser.model;
  * @author Guan Peixiang
  * @since 2026/05/19
  */
+@Setter
+@Getter
 public class AlterColumnChange {
 
     /**
@@ -64,46 +69,6 @@ public class AlterColumnChange {
         change.dataType = dataType;
         change.comment = comment;
         return change;
-    }
-
-    public Action getAction() {
-        return action;
-    }
-
-    public void setAction(Action action) {
-        this.action = action;
-    }
-
-    public String getColumnName() {
-        return columnName;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-
-    public String getNewColumnName() {
-        return newColumnName;
-    }
-
-    public void setNewColumnName(String newColumnName) {
-        this.newColumnName = newColumnName;
-    }
-
-    public String getDataType() {
-        return dataType;
-    }
-
-    public void setDataType(String dataType) {
-        this.dataType = dataType;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
     }
 
     @Override

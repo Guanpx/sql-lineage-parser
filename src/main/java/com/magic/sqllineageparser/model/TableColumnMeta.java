@@ -1,11 +1,18 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * CREATE TABLE 语句中的字段元信息
+ * <p>
+ * 此元数据用于数据地图展示，也同样在图谱中保存孤立节点
  *
  * @author Guan Peixiang
  * @since 2026/08/26
  */
+@Setter
+@Getter
 public class TableColumnMeta {
 
     private String columnName;
@@ -29,46 +36,6 @@ public class TableColumnMeta {
         meta.defaultValue = defaultValue;
         meta.primaryKey = primaryKey;
         return meta;
-    }
-
-    public String getColumnName() {
-        return columnName;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-
-    public String getDataType() {
-        return dataType;
-    }
-
-    public void setDataType(String dataType) {
-        this.dataType = dataType;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public String getDefaultValue() {
-        return defaultValue;
-    }
-
-    public void setDefaultValue(String defaultValue) {
-        this.defaultValue = defaultValue;
-    }
-
-    public boolean isPrimaryKey() {
-        return primaryKey;
-    }
-
-    public void setPrimaryKey(boolean primaryKey) {
-        this.primaryKey = primaryKey;
     }
 
     @Override

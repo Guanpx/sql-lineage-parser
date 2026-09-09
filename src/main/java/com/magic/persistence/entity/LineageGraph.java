@@ -1,5 +1,8 @@
 package com.magic.persistence.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +14,8 @@ import java.util.List;
  * @author Guan Peixiang
  * @since 2023/12/20
  */
+@Setter
+@Getter
 public class LineageGraph {
 
     /**
@@ -85,54 +90,6 @@ public class LineageGraph {
     }
 
     // Getters and Setters
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getSql() {
-        return sql;
-    }
-
-    public void setSql(String sql) {
-        this.sql = sql;
-    }
-
-    public List<LineageNode> getNodes() {
-        return nodes;
-    }
-
-    public void setNodes(List<LineageNode> nodes) {
-        this.nodes = nodes;
-    }
-
-    public List<LineageEdge> getEdges() {
-        return edges;
-    }
-
-    public void setEdges(List<LineageEdge> edges) {
-        this.edges = edges;
-    }
-
-    public Long getCreateTime() {
-        return createTime;
-    }
-
-    public void setCreateTime(Long createTime) {
-        this.createTime = createTime;
-    }
 
     @Override
     public String toString() {

@@ -5,7 +5,7 @@ select id_no
       ,'credit_amount_avg' as feature
   from (select id_no,
                user_group_id,
-               max(group_credit_amount) group_credit_amount
+               max(group_credit_amount_mid) group_credit_amount
           from mid.mid_tempview
          group by id_no, user_group_id
          ) t

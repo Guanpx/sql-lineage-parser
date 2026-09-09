@@ -1,5 +1,8 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,11 +18,17 @@ import java.util.List;
  */
 public class TreeNode<T> {
 
+    @Getter
     private long id;
+    @Setter
+    @Getter
     private T value;
+    @Getter
     private TreeNode<T> parent;
     private List<TreeNode<T>> children;
+    @Getter
     private int height;
+    @Getter
     private int subtreeSize;
 
     public TreeNode() {
@@ -38,14 +47,6 @@ public class TreeNode<T> {
      */
     public static <T> TreeNode<T> of(T data) {
         return new TreeNode<>(data);
-    }
-
-    public T getValue() {
-        return value;
-    }
-
-    public void setValue(T value) {
-        this.value = value;
     }
 
     /**
@@ -115,19 +116,4 @@ public class TreeNode<T> {
         return children;
     }
 
-    public long getId() {
-        return id;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public int getSubtreeSize() {
-        return subtreeSize;
-    }
-
-    public TreeNode<T> getParent() {
-        return parent;
-    }
 }

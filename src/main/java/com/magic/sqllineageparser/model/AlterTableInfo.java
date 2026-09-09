@@ -1,5 +1,8 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,25 +17,13 @@ import java.util.List;
  */
 public class AlterTableInfo {
 
+    @Setter
+    @Getter
     private String schema;
+    @Setter
+    @Getter
     private String tableName;
     private final List<AlterColumnChange> changes = new ArrayList<>();
-
-    public String getSchema() {
-        return schema;
-    }
-
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
 
     public List<AlterColumnChange> getChanges() {
         return Collections.unmodifiableList(changes);

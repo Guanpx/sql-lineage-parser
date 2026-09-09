@@ -1,5 +1,8 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,35 +17,17 @@ import java.util.List;
  */
 public class CreateTableInfo {
 
+    @Setter
+    @Getter
     private String schema;
+    @Setter
+    @Getter
     private String tableName;
+    @Setter
+    @Getter
     private String comment;
     private final List<TableColumnMeta> columns = new ArrayList<>();
     private final List<TableColumnMeta> partitionColumns = new ArrayList<>();
-
-    public String getSchema() {
-        return schema;
-    }
-
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
 
     public List<TableColumnMeta> getColumns() {
         return Collections.unmodifiableList(columns);

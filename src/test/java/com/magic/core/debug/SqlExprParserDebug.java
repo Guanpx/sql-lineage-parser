@@ -20,14 +20,14 @@ import java.util.Map;
 public class SqlExprParserDebug {
 
     public static void main(String[] args) {
-        debugSQLPropertyExpr();
-        debugSQLIdentifierExpr();
+//        debugSQLPropertyExpr();
+//        debugSQLIdentifierExpr();
         debugSQLCaseExpr();
-        debugSQLAggregateExpr();
-        debugSQLMethodInvokeExpr();
-        debugSQLBinaryOpExpr();
-        debugSQLConstantExpr();
-        debugComplexExpr();
+//        debugSQLAggregateExpr();
+//        debugSQLMethodInvokeExpr();
+//        debugSQLBinaryOpExpr();
+//        debugSQLConstantExpr();
+//        debugComplexExpr();
     }
 
     /**

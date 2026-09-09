@@ -1,5 +1,8 @@
 package com.magic.sqllineageparser.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -10,6 +13,8 @@ import java.util.List;
  * @author Guan Peixiang
  * @since 2023/9/12
  */
+@Getter
+@Setter
 public class ColumnNode {
 
     /**
@@ -57,40 +62,6 @@ public class ColumnNode {
      */
     private boolean constant;
 
-    // Getters and Setters
-
-    public TableNode getOwner() {
-        return owner;
-    }
-
-    public void setOwner(TableNode owner) {
-        this.owner = owner;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getAlias() {
-        return alias;
-    }
-
-    public void setAlias(String alias) {
-        this.alias = alias;
-    }
-
     /**
      * 获取来源列（不可变视图）
      */
@@ -105,35 +76,4 @@ public class ColumnNode {
         sourceColumns.add(source);
     }
 
-    public String getExpression() {
-        return expression;
-    }
-
-    public void setExpression(String expression) {
-        this.expression = expression;
-    }
-
-    public Long getTableTreeNodeId() {
-        return tableTreeNodeId;
-    }
-
-    public void setTableTreeNodeId(Long tableTreeNodeId) {
-        this.tableTreeNodeId = tableTreeNodeId;
-    }
-
-    public String getTableExpression() {
-        return tableExpression;
-    }
-
-    public void setTableExpression(String tableExpression) {
-        this.tableExpression = tableExpression;
-    }
-
-    public boolean isConstant() {
-        return constant;
-    }
-
-    public void setConstant(boolean constant) {
-        this.constant = constant;
-    }
 }
