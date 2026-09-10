@@ -51,7 +51,7 @@ public final class SqlCreateViewParser {
         }
 
         collectExplicitColumns(stmt.getColumns(), info);
-        info.setSourceLineage(SqlLineageParser.parseSelect(stmt.getSubQuery()));
+        info.setOutputColumns(SqlLineageParser.parseSelect(stmt.getSubQuery()));
 
         LOGGER.log(Level.FINE, () -> "CREATE VIEW 解析完成: " + info);
         return info;

@@ -23,7 +23,6 @@ import com.magic.sqllineageparser.model.AlterTableInfo;
 import com.magic.sqllineageparser.model.CreateTableInfo;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,9 +50,9 @@ public final class SqlLineageParser {
      * <p>支持: SELECT 查询块、UNION/INTERSECT/EXCEPT、WITH (CTE)
      *
      * @param sql SQL语句
-     * @return 血缘树根节点，解析失败返回 null
+     * @return 输出列列表（每列的 sourceColumns 为其来源列），解析失败返回 null
      */
-    public static TreeNode<ColumnNode> parserSingleSelectSql(String sql) {
+    public static List<ColumnNode> parserSingleSelectSql(String sql) {
         if (StringUtils.isEmpty(sql)) {
             return null;
         }
@@ -212,9 +211,9 @@ public final class SqlLineageParser {
      * 公开以便 DML / DDL 解析器复用 SELECT 部分的血缘解析
      *
      * @param select Druid AST 中的 SQLSelect
-     * @return 血缘树根节点，children 为输出列
+     * @return 输出列列表，每列的 sourceColumns 为其血缘来源
      */
-    public static TreeNode<ColumnNode> parseSelect(SQLSelect select) {
+    public static List<ColumnNode> parseSelect(SQLSelect select) {
         if (select == null) {
             return null;
         }
@@ -254,12 +253,12 @@ public final class SqlLineageParser {
     }
 
     /**
-     * 解析 SQLSelectQueryBlock，返回血缘树
+     * 解析 SQLSelectQueryBlock，返回输出列列表
      */
-    private static TreeNode<ColumnNode> parseQueryBlock(SQLSelectQueryBlock queryBlock,
-                                                       Map<String, Map<String, List<ColumnNode>>> ctes) {
+    private static List<ColumnNode> parseQueryBlock(SQLSelectQueryBlock queryBlock,
+                                                    Map<String, Map<String, List<ColumnNode>>> ctes) {
         LOGGER.fine("解析 SELECT 查询块");
-        var root = new TreeNode<ColumnNode>();
+        List<ColumnNode> columns = new ArrayList<>();
 
         ExprParseContext context = ExprParseContext.fromTableSource(queryBlock.getFrom());
         if (ctes != null) {
@@ -280,8 +279,7 @@ public final class SqlLineageParser {
             node.setAlias(alias);
             node.setExpression(expr.toString());
 
-            TreeNode<ColumnNode> child = TreeNode.of(node);
-            root.addChild(child);
+            columns.add(node);
 
             context.setCurrentColumn(node);
             BaseSqlExprParser.parserSqlExpr(expr, context);
@@ -289,17 +287,17 @@ public final class SqlLineageParser {
             String displayName = StringUtils.isEmpty(alias) ? itemName : alias;
             LOGGER.log(Level.FINE, () -> "列 " + displayName + " 的来源列数: " + node.getSourceColumns().size());
         }
-        return root;
+        return columns;
     }
 
     /**
      * 解析 UNION / INTERSECT / EXCEPT 查询，按列位置合并左右分支血缘
      */
-    private static TreeNode<ColumnNode> parseUnionQuery(SQLUnionQuery unionQuery,
-                                                       Map<String, Map<String, List<ColumnNode>>> ctes) {
+    private static List<ColumnNode> parseUnionQuery(SQLUnionQuery unionQuery,
+                                                    Map<String, Map<String, List<ColumnNode>>> ctes) {
         LOGGER.fine(() -> "解析 UNION 查询，操作符: " + unionQuery.getOperator());
 
-        List<TreeNode<ColumnNode>> branches = new ArrayList<>();
+        List<List<ColumnNode>> branches = new ArrayList<>();
         List<SQLSelectQuery> relations = unionQuery.getRelations();
         if (relations == null || relations.isEmpty()) {
             relations = new ArrayList<>();
@@ -312,7 +310,7 @@ public final class SqlLineageParser {
         }
 
         for (SQLSelectQuery relation : relations) {
-            TreeNode<ColumnNode> branch = parseSelectQuery(relation, ctes);
+            List<ColumnNode> branch = parseSelectQuery(relation, ctes);
             if (branch != null) {
                 branches.add(branch);
             }
@@ -322,35 +320,35 @@ public final class SqlLineageParser {
             return null;
         }
 
-        TreeNode<ColumnNode> root = new TreeNode<>();
-        TreeNode<ColumnNode> firstBranch = branches.get(0);
-        int columnCount = firstBranch.getChildren().size();
+        List<ColumnNode> mergedColumns = new ArrayList<>();
+        List<ColumnNode> firstBranch = branches.get(0);
+        int columnCount = firstBranch.size();
 
         for (int i = 0; i < columnCount; i++) {
-            ColumnNode template = firstBranch.getChildren().get(i).getValue();
+            ColumnNode template = firstBranch.get(i);
             ColumnNode merged = new ColumnNode();
             merged.setName(template.getName());
             merged.setAlias(template.getAlias());
             merged.setExpression(template.getExpression());
 
-            for (TreeNode<ColumnNode> branch : branches) {
-                if (i < branch.getChildren().size()) {
-                    ColumnNode branchCol = branch.getChildren().get(i).getValue();
+            for (List<ColumnNode> branch : branches) {
+                if (i < branch.size()) {
+                    ColumnNode branchCol = branch.get(i);
                     for (ColumnNode src : branchCol.getSourceColumns()) {
                         merged.addSourceColumn(src);
                     }
                 }
             }
-            root.addChild(TreeNode.of(merged));
+            mergedColumns.add(merged);
         }
-        return root;
+        return mergedColumns;
     }
 
     /**
      * 派发 SQLSelectQueryBlock / SQLUnionQuery 解析
      */
-    private static TreeNode<ColumnNode> parseSelectQuery(SQLSelectQuery query,
-                                                        Map<String, Map<String, List<ColumnNode>>> ctes) {
+    private static List<ColumnNode> parseSelectQuery(SQLSelectQuery query,
+                                                     Map<String, Map<String, List<ColumnNode>>> ctes) {
         if (query instanceof SQLSelectQueryBlock block) {
             return parseQueryBlock(block, ctes);
         } else if (query instanceof SQLUnionQuery union) {
@@ -447,22 +445,21 @@ public final class SqlLineageParser {
         }
         merged.putAll(collectCteSources(select.getWithSubQuery()));
 
-        TreeNode<ColumnNode> tree;
+        List<ColumnNode> columns;
         var query = select.getQuery();
         if (query instanceof SQLSelectQueryBlock block) {
-            tree = parseQueryBlock(block, merged);
+            columns = parseQueryBlock(block, merged);
         } else if (query instanceof SQLUnionQuery union) {
-            tree = parseUnionQuery(union, merged);
+            columns = parseUnionQuery(union, merged);
         } else {
             return Collections.emptyMap();
         }
 
         Map<String, List<ColumnNode>> result = new LinkedHashMap<>();
-        if (tree == null) {
+        if (columns == null) {
             return result;
         }
-        for (TreeNode<ColumnNode> child : tree.getChildren()) {
-            ColumnNode col = child.getValue();
+        for (ColumnNode col : columns) {
             String visible = visibleColumnName(col);
             if (visible != null) {
                 result.put(visible, new ArrayList<>(col.getSourceColumns()));

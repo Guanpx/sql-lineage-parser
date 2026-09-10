@@ -6,7 +6,6 @@ import com.magic.persistence.entity.LineageGraph;
 import com.magic.persistence.entity.LineageNode;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.Collections;
 import java.util.List;

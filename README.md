@@ -17,7 +17,7 @@
 - **虚拟表列下钻**: CTE / 子查询作为 FROM 表源时，外层 `alias.col` 自动下钻到真实底表列
 - **DML 血缘**: INSERT INTO / INSERT OVERWRITE + PARTITION、CREATE TABLE AS SELECT、CREATE VIEW
 - **DDL 解析**: 纯 CREATE TABLE、CREATE VIEW AS SELECT、ALTER TABLE ADD/DROP/RENAME/MODIFY/CHANGE COLUMN，提取字段、类型、注释、默认值和分区字段
-- **树形结构输出**: 直观的血缘树结构，便于遍历和分析
+- **列级血缘列表输出**: 输出列直接以 `List<ColumnNode>` 暴露，每列携带 `sourceColumns` 来源列，遍历即用
 - **类型安全的密封接口**: 基于 Java 17 `sealed interface` 限制并管理解析器实现类
 - **模块化设计**: 表达式 / 表源 / DML / DDL 解析器按类型独立成文件，易于扩展新语法
 - **图数据库持久化**: 支持将血缘关系写入 Neo4j / Nebula Graph（预留接入）
@@ -56,7 +56,8 @@ mvn test
 ```java
 import com.magic.core.parser.SqlLineageParser;
 import com.magic.sqllineageparser.model.ColumnNode;
-import com.magic.sqllineageparser.model.TreeNode;
+
+import java.util.List;
 
 String sql = """
     SELECT
@@ -68,10 +69,9 @@ String sql = """
     GROUP BY a.id, b.name
     """;
 
-TreeNode<ColumnNode> lineageTree = SqlLineageParser.parserSingleSelectSql(sql);
+List<ColumnNode> columns = SqlLineageParser.parserSingleSelectSql(sql);
 
-lineageTree.getChildren().forEach(child -> {
-    ColumnNode column = child.getValue();
+columns.forEach(column -> {
     System.out.println("输出列: " + column.getAlias());
     System.out.println("来源: " + column.getSourceColumns());
     System.out.println("---");
@@ -88,17 +88,17 @@ String cteSql = """
     SELECT au.name, t.total
     FROM active_users au LEFT JOIN top_orders t ON au.id = t.user_id
     """;
-TreeNode<ColumnNode> tree = SqlLineageParser.parserSingleSelectSql(cteSql);
+List<ColumnNode> tree = SqlLineageParser.parserSingleSelectSql(cteSql);
 // au.name → users.name, t.total → orders.amount
 
 // UNION 按列位置合并左右分支
 String unionSql = "SELECT id FROM t1 UNION ALL SELECT id FROM t2";
-TreeNode<ColumnNode> unionTree = SqlLineageParser.parserSingleSelectSql(unionSql);
+List<ColumnNode> unionColumns = SqlLineageParser.parserSingleSelectSql(unionSql);
 // 第 1 列来源 = [t1.id, t2.id]
 
 // 窗口函数 PARTITION BY / ORDER BY 列自动收集
 String winSql = "SELECT ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) rn FROM emp";
-TreeNode<ColumnNode> winTree = SqlLineageParser.parserSingleSelectSql(winSql);
+List<ColumnNode> winColumns = SqlLineageParser.parserSingleSelectSql(winSql);
 // rn 来源 = [emp.dept, emp.salary]
 ```
 
@@ -118,7 +118,7 @@ System.out.println(info.getQualifiedTargetTable()); // dw.daily_order
 System.out.println(info.getPartitions());           // {dt='2026-05-20'}
 for (int i = 0; i < info.getOutputColumnCount(); i++) {
     String targetCol = info.getTargetColumnAt(i);
-    var sources = info.getSourceLineage().getChildren().get(i).getValue().getSourceColumns();
+    var sources = info.getOutputColumns().get(i).getSourceColumns();
     System.out.println(targetCol + " <- " + sources);
 }
 
@@ -160,10 +160,10 @@ info.getChanges().forEach(c -> System.out.println(c));
 // ADD status string COMMENT '订单状态'
 ```
 
-### 血缘树结构示意
+### 血缘输出结构示意
 
 ```
-ROOT (虚拟根节点)
+List<ColumnNode>
 ├── Column: id        (alias=null)
 │   └── Source: orders.id
 ├── Column: name      (alias=null)
@@ -172,7 +172,7 @@ ROOT (虚拟根节点)
     └── Source: orders.amount
 ```
 
-DML 场景下 `DmlLineageInfo` 在血缘树之上额外携带：
+DML 场景下 `DmlLineageInfo` 在输出列之上额外携带：
 
 ```
 DmlLineageInfo
@@ -181,21 +181,21 @@ DmlLineageInfo
 ├── targetTable      : daily_order
 ├── targetColumns    : [order_id, user_id, amount]  (显式或回退到 SELECT alias)
 ├── partitions       : {dt='2026-05-20'}
-└── sourceLineage    : TreeNode<ColumnNode>  (同 SELECT 血缘树)
+└── outputColumns    : List<ColumnNode>  (同 SELECT 输出列，每列含 sourceColumns)
 ```
 
 ## 入口 API 一览
 
 | 入口 | 输入 | 输出 | 适用场景 |
 |------|------|------|---------|
-| `parserSingleSelectSql(sql)` | SELECT / UNION / WITH | `TreeNode<ColumnNode>` | 查询血缘 |
+| `parserSingleSelectSql(sql)` | SELECT / UNION / WITH | `List<ColumnNode>` | 查询血缘 |
 | `parserInsertSql(sql)` | INSERT INTO / OVERWRITE | `DmlLineageInfo` | 数据写入血缘 |
 | `parserCreateTableSql(sql)` | CREATE TABLE [AS SELECT] | `DmlLineageInfo` (非 CTAS 返回 null) | 建表 + 数据流 |
 | `parserCreateTableDdlSql(sql)` | 不带 AS SELECT 的 CREATE TABLE | `CreateTableInfo` | 表结构元信息 |
 | `parserDmlSql(sql)` | INSERT / CTAS / CREATE VIEW | `DmlLineageInfo` | DML/DDL 统一入口 |
 | `parserCreateViewSql(sql)` | CREATE VIEW [AS SELECT] | `DmlLineageInfo` | 视图血缘 |
 | `parserAlterTableSql(sql)` | ALTER TABLE | `AlterTableInfo` | 表结构变更 |
-| `parseSelect(SQLSelect)` | Druid AST SQLSelect | `TreeNode<ColumnNode>` | 内部 / 高级用户复用 |
+| `parseSelect(SQLSelect)` | Druid AST SQLSelect | `List<ColumnNode>` | 内部 / 高级用户复用 |
 
 ## 项目结构
 
@@ -248,7 +248,6 @@ sql-lineage-parser/
 │   │       ├── Neo4jLineageRepository.java     # Neo4j 实现
 │   │       └── NebulaLineageRepository.java    # Nebula 实现
 │   └── sqllineageparser/model/
-│       ├── TreeNode.java                       # 通用树结构
 │       ├── TableNode.java                      # 表节点模型
 │       ├── ColumnNode.java                     # 列节点模型
 │       ├── AlterTableInfo.java                 # ALTER 解析结果
@@ -318,14 +317,13 @@ repo.close();
 
 | 模型 | 说明 |
 |------|------|
-| **TreeNode\<T>** | 通用泛型树结构，支持父子关系、层高计算、子树遍历 |
 | **TableNode** | 表节点：schema、表名、别名、是否虚拟表、字段列表 |
 | **ColumnNode** | 列节点：列名、别名、来源列、表达式、是否常量 |
 | **AlterTableInfo** | ALTER 解析结果：目标表 + 列变更列表 |
 | **AlterColumnChange** | 单列变更项：ADD / DROP / RENAME / MODIFY |
 | **CreateTableInfo** | 纯 CREATE TABLE 解析结果：目标表 + 表注释 + 字段与分区字段元信息 |
 | **TableColumnMeta** | 建表字段元信息：字段名、类型、注释、默认值、主键标记 |
-| **DmlLineageInfo** | DML 解析结果：操作类型 / 目标表 / 目标列 / 分区 / 源 SELECT 血缘 |
+| **DmlLineageInfo** | DML 解析结果：操作类型 / 目标表 / 目标列 / 分区 / 源 SELECT 输出列血缘 |
 | **DmlOperation** | DML 操作枚举：INSERT_INTO / INSERT_OVERWRITE / CTAS / CREATE_VIEW |
 
 ### 支持的表达式类型
@@ -413,7 +411,7 @@ v0.2.0 在 v0.1.0 基础 SELECT 解析能力之上，引入解析上下文、模
 | 持久化 | **Neo4j 预留实现** | `Neo4jLineageRepository`，Cypher MERGE / 上下游查询语句已生成，待接入 `neo4j-java-driver` |
 | 持久化 | **Nebula 预留实现** | `NebulaLineageRepository`，nGQL 语句已生成，待接入 `nebula-java` |
 | 工程化 | **调试工具集** | `SqlLineageParserDebug` / `SqlExprParserDebug` / `TableSourceParserDebug` / `DebugHelper` 用于开发期可视化血缘树 |
-| 测试 | **JUnit 5 测试套件** | 78 个用例覆盖 SELECT、UNION、CTE、嵌套子查询、窗口函数、LATERAL VIEW、ALTER、INSERT、CTAS 等场景 |
+| 测试 | **JUnit 5 测试套件** | 71 个用例覆盖 SELECT、UNION、CTE、嵌套子查询、窗口函数、LATERAL VIEW、ALTER 等场景 |
 | 测试 | **生产 SQL 用例** | `sqlProd01.sql`、`sqlWindow01.sql`、`sqlCte01.sql` 等复杂场景回归 |
 
 #### 计划中 📋
@@ -440,7 +438,7 @@ v0.3.0 在 v0.2.0 查询能力之上新增 DML 解析，建立从源表到目标
 | DML 解析 | **INSERT OVERWRITE ... SELECT** | 通过 `isOverwrite()` 区分，与 INSERT INTO 共享入口 |
 | DML 解析 | **PARTITION 子句** | 静态分区（含值）/ 动态分区（值为 null）均归入 `DmlLineageInfo.partitions` |
 | DML 解析 | **CREATE TABLE AS SELECT (CTAS)** | 从 column definitions 提取目标列，回退到 SELECT 输出名 |
-| DML 模型 | **`DmlLineageInfo` / `DmlOperation`** | 携带操作类型、目标表、目标列、分区、源 SELECT 血缘树 |
+| DML 模型 | **`DmlLineageInfo` / `DmlOperation`** | 携带操作类型、目标表、目标列、分区、源 SELECT 输出列血缘 |
 | DML 模型 | **目标列三级兜底** | 显式列 → SELECT alias → 从 expression 提取列名（处理 `t.col` 无 alias 场景） |
 | 测试 | **DML 测试** | `InsertStatementTest` 4 用例 + `CtasTest` 3 用例，覆盖 INSERT INTO/OVERWRITE/PARTITION/CTAS/统一入口 |
 
@@ -487,7 +485,8 @@ v0.4.0 聚焦 DDL 元信息与结构变更能力。按当前开发决策，DROP 
 - ✅ CREATE TABLE AS SELECT 解析；纯 CREATE TABLE 字段元信息解析；CREATE VIEW 解析
 - ✅ 统一 DML/DDL 入口（INSERT / CTAS / CREATE VIEW）
 - ✅ 持久化模块预留（Neo4j / Nebula 双实现）
-- ✅ **87 个单元测试用例**，覆盖 SELECT / UNION / CTE / 子查询 / 窗口函数 / LATERAL VIEW / ALTER / INSERT / CTAS / CREATE VIEW / 纯 CREATE TABLE 等场景
+- ✅ **89 个单元测试用例**，覆盖 SELECT / UNION / CTE / 子查询 / 窗口函数 / LATERAL VIEW / ALTER / INSERT / CTAS / CREATE VIEW / 纯 CREATE TABLE / CASE 血缘回归 等场景
+- ✅ 血缘输出为扁平 `List<ColumnNode>`（已移除未发挥树作用的 TreeNode 包装，2026-08-27 重构）
 - ✅ 生产级复杂 SQL 验证（sqlProd01.sql / sqlWindow01.sql / sqlCte01.sql / sqlInsert*.sql / sqlCtas01.sql / sqlView*.sql / sqlCreateTable01.sql）
 - ✅ 调试工具集（SqlLineageParserDebug 等）
 

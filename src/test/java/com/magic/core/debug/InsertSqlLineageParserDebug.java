@@ -4,7 +4,8 @@ import com.magic.core.parser.SqlLineageParser;
 import com.magic.core.util.SqlFileReader;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
-import com.magic.sqllineageparser.model.TreeNode;
+
+import java.util.List;
 
 /**
  * SqlLineageParser 调试类
@@ -32,10 +33,10 @@ public class InsertSqlLineageParserDebug {
         String sql = "SELECT id, name, age FROM users WHERE id > 10";
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
+        DebugHelper.printLineageColumns(result);
     }
 
     /**
@@ -47,10 +48,10 @@ public class InsertSqlLineageParserDebug {
         String sql = "SELECT t.id AS user_id, t.name AS user_name, CONCAT(t.first, t.last) AS full_name FROM users t";
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
+        DebugHelper.printLineageColumns(result);
     }
 
     /**
@@ -68,13 +69,13 @@ public class InsertSqlLineageParserDebug {
 //        String sql = SqlFileReader.readCaseSql("sqlcase1.sql");
         DebugHelper.printSql(sql);
 
-        // TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        // List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
         DmlLineageInfo dmlLineageInfo = SqlLineageParser.parserInsertSql(sql);
          System.out.println(dmlLineageInfo.getTargetTable());
 
 
 //        DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(dmlLineageInfo.getSourceLineage());
+        DebugHelper.printLineageColumns(dmlLineageInfo.getOutputColumns());
     }
 
     /**
@@ -87,15 +88,15 @@ public class InsertSqlLineageParserDebug {
         String sql1 = SqlFileReader.readJoinSql("sqlJoin01.sql");
         DebugHelper.printSql(sql1);
         DebugHelper.printSubTitle("sqlJoin01 解析结果");
-        TreeNode<ColumnNode> result1 = SqlLineageParser.parserSingleSelectSql(sql1);
-        DebugHelper.printLineageTree(result1);
+        List<ColumnNode> result1 = SqlLineageParser.parserSingleSelectSql(sql1);
+        DebugHelper.printLineageColumns(result1);
 
         // 带子查询的JOIN
         String sql2 = SqlFileReader.readJoinSql("sqlJoin02.sql");
         DebugHelper.printSql(sql2);
         DebugHelper.printSubTitle("sqlJoin02 解析结果");
-        TreeNode<ColumnNode> result2 = SqlLineageParser.parserSingleSelectSql(sql2);
-        DebugHelper.printLineageTree(result2);
+        List<ColumnNode> result2 = SqlLineageParser.parserSingleSelectSql(sql2);
+        DebugHelper.printLineageColumns(result2);
     }
 
     /**
@@ -108,22 +109,22 @@ public class InsertSqlLineageParserDebug {
         DebugHelper.printSubTitle("IF函数");
         String sql1 = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc01.sql");
         DebugHelper.printSql(sql1);
-        TreeNode<ColumnNode> result1 = SqlLineageParser.parserSingleSelectSql(sql1);
-        DebugHelper.printLineageTree(result1);
+        List<ColumnNode> result1 = SqlLineageParser.parserSingleSelectSql(sql1);
+        DebugHelper.printLineageColumns(result1);
 
         // MAX+IF嵌套
         DebugHelper.printSubTitle("MAX+IF嵌套函数");
         String sql2 = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc02.sql");
         DebugHelper.printSql(sql2);
-        TreeNode<ColumnNode> result2 = SqlLineageParser.parserSingleSelectSql(sql2);
-        DebugHelper.printLineageTree(result2);
+        List<ColumnNode> result2 = SqlLineageParser.parserSingleSelectSql(sql2);
+        DebugHelper.printLineageColumns(result2);
 
         // NVL函数
         DebugHelper.printSubTitle("NVL函数");
         String sql3 = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc03.sql");
         DebugHelper.printSql(sql3);
-        TreeNode<ColumnNode> result3 = SqlLineageParser.parserSingleSelectSql(sql3);
-        DebugHelper.printLineageTree(result3);
+        List<ColumnNode> result3 = SqlLineageParser.parserSingleSelectSql(sql3);
+        DebugHelper.printLineageColumns(result3);
     }
 
     /**
@@ -135,15 +136,15 @@ public class InsertSqlLineageParserDebug {
         String sql = SqlFileReader.readProdSql("sqlProd01.sql");
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
+        DebugHelper.printLineageColumns(result);
 
         // 统计信息
-        if (result != null && result.getChildren() != null) {
+        if (result != null) {
             DebugHelper.printSubTitle("统计信息");
-            DebugHelper.printKeyValue("输出列数量", result.getChildren().size());
+            DebugHelper.printKeyValue("输出列数量", result.size());
         }
     }
 
@@ -156,12 +157,12 @@ public class InsertSqlLineageParserDebug {
         String sql = SqlFileReader.readUnionSql("sqlUnion01.sql");
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         if (result == null) {
             DebugHelper.printError("UNION查询当前不支持");
         } else {
-            DebugHelper.printLineageTree(result);
+            DebugHelper.printLineageColumns(result);
         }
     }
 
@@ -172,9 +173,9 @@ public class InsertSqlLineageParserDebug {
         DebugHelper.printTitle("调试自定义SQL");
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
+        DebugHelper.printLineageColumns(result);
     }
 }

@@ -57,7 +57,7 @@ public final class SqlInsertParser {
         collectExplicitColumns(stmt.getColumns(), info);
         collectPartitions(stmt.getPartitions(), info);
 
-        info.setSourceLineage(SqlLineageParser.parseSelect(stmt.getQuery()));
+        info.setOutputColumns(SqlLineageParser.parseSelect(stmt.getQuery()));
 
         LOGGER.log(Level.FINE, () -> "INSERT 解析完成: " + info);
         return info;

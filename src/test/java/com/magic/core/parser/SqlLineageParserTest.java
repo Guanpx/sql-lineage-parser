@@ -2,7 +2,6 @@ package com.magic.core.parser;
 
 import com.magic.core.util.SqlFileReader;
 import com.magic.sqllineageparser.model.ColumnNode;
-import com.magic.sqllineageparser.model.TreeNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,7 @@ class SqlLineageParserTest {
         @Test
         @DisplayName("解析空SQL应返回null")
         void testParseEmptySql() {
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(null);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(null);
             assertNull(result);
 
             result = SqlLineageParser.parserSingleSelectSql("");
@@ -37,24 +36,24 @@ class SqlLineageParserTest {
         @DisplayName("解析简单SELECT语句")
         void testParseSimpleSelect() {
             String sql = "SELECT id, name FROM users";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(2, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(2, result.size());
         }
 
         @Test
         @DisplayName("解析带别名的SELECT语句")
         void testParseSelectWithAlias() {
             String sql = "SELECT id AS user_id, name AS user_name FROM users u";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(2, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(2, result.size());
 
-            ColumnNode firstColumn = result.getChildren().get(0).getValue();
+            ColumnNode firstColumn = result.get(0);
             assertNotNull(firstColumn);
             assertEquals("user_id", firstColumn.getAlias());
         }
@@ -68,42 +67,42 @@ class SqlLineageParserTest {
         @DisplayName("解析CASE WHEN语句 - sqlcase1.sql")
         void testParseCaseWhenFromFile() {
             String sql = SqlFileReader.readCaseSql("sqlcase1.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
+            assertNotNull(result);
             // CASE WHEN + u.rere + u.* = 3个字段
-            assertTrue(result.getChildren().size() >= 1);
+            assertTrue(result.size() >= 1);
         }
 
         @Test
         @DisplayName("解析带子查询的SELECT - sqlCase02.sql")
         void testParseCaseWithSubquery() {
             String sql = SqlFileReader.readCaseSql("sqlCase02.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(5, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(5, result.size());
         }
 
         @Test
         @DisplayName("解析带反引号别名的SELECT - sqlCase03.sql")
         void testParseCaseWithBacktickAlias() {
             String sql = SqlFileReader.readCaseSql("sqlCase03.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
+            assertNotNull(result);
         }
 
         @Test
         @DisplayName("简单 CASE 的操作数列纳入血缘 (P1 回归)")
         void testSimpleCaseOperandCollected() {
             String sql = "SELECT CASE dept WHEN 1 THEN 'a' ELSE 'b' END AS c FROM emp";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode col = result.getChildren().get(0).getValue();
+            ColumnNode col = result.get(0);
             // CASE 操作数 dept 必须作为来源列被收集
             assertTrue(col.getSourceColumns().stream()
                             .anyMatch(s -> "emp".equals(s.getTableName()) && "dept".equals(s.getName())),
@@ -114,9 +113,9 @@ class SqlLineageParserTest {
         @DisplayName("搜索型 CASE 的 WHEN 条件列纳入血缘 (P1 回归)")
         void testSearchedCaseConditionCollected() {
             String sql = "SELECT CASE WHEN status='X' THEN amount ELSE 0 END AS c FROM orders";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode col = result.getChildren().get(0).getValue();
+            ColumnNode col = result.get(0);
             // WHEN 条件列 status 与 THEN 取值列 amount 都应被收集
             assertTrue(col.getSourceColumns().stream()
                             .anyMatch(s -> "orders".equals(s.getTableName()) && "status".equals(s.getName())),
@@ -135,22 +134,22 @@ class SqlLineageParserTest {
         @DisplayName("解析简单LEFT JOIN - sqlJoin01.sql")
         void testParseSimpleLeftJoin() {
             String sql = SqlFileReader.readJoinSql("sqlJoin01.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(6, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(6, result.size());
         }
 
         @Test
         @DisplayName("解析带子查询的LEFT JOIN - sqlJoin02.sql")
         void testParseJoinWithSubquery() {
             String sql = SqlFileReader.readJoinSql("sqlJoin02.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(8, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(8, result.size());
         }
     }
 
@@ -162,33 +161,33 @@ class SqlLineageParserTest {
         @DisplayName("解析IF函数 - sqlMaxIfNvlFunc01.sql")
         void testParseIfFunction() {
             String sql = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc01.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(1, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(1, result.size());
         }
 
         @Test
         @DisplayName("解析MAX+IF嵌套函数 - sqlMaxIfNvlFunc02.sql")
         void testParseMaxIfFunction() {
             String sql = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc02.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(1, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(1, result.size());
         }
 
         @Test
         @DisplayName("解析NVL函数 - sqlMaxIfNvlFunc03.sql")
         void testParseNvlFunction() {
             String sql = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc03.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
-            assertEquals(1, result.getChildren().size());
+            assertNotNull(result);
+            assertEquals(1, result.size());
         }
     }
 
@@ -200,12 +199,12 @@ class SqlLineageParserTest {
         @DisplayName("解析UNION查询 - sqlUnion01.sql")
         void testParseUnionQuery() {
             String sql = SqlFileReader.readUnionSql("sqlUnion01.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result, "UNION 查询应返回血缘树");
             // 左右分支各 5 列, 按位置合并后输出 5 列
-            assertEquals(5, result.getChildren().size());
+            assertEquals(5, result.size());
             // 第二列 order_id / invoice_id 的来源应同时包含两个分支
-            ColumnNode secondCol = result.getChildren().get(1).getValue();
+            ColumnNode secondCol = result.get(1);
             assertTrue(secondCol.getSourceColumns().size() >= 2,
                     "UNION 第二列应合并来自 orders 和 invoices 的来源");
         }
@@ -214,10 +213,10 @@ class SqlLineageParserTest {
         @DisplayName("解析内联 UNION ALL")
         void testParseUnionAll() {
             String sql = "SELECT a FROM t1 UNION ALL SELECT b FROM t2 UNION ALL SELECT c FROM t3";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            assertEquals(1, result.getChildren().size());
-            ColumnNode col = result.getChildren().get(0).getValue();
+            assertEquals(1, result.size());
+            ColumnNode col = result.get(0);
             // 3 个分支的来源都应被合并
             assertEquals(3, col.getSourceColumns().size());
         }
@@ -232,10 +231,10 @@ class SqlLineageParserTest {
         void testParseSingleCte() {
             String sql = "WITH cte1 AS (SELECT id AS uid, name FROM users) " +
                     "SELECT cte1.uid, cte1.name FROM cte1";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
-            ColumnNode firstCol = result.getChildren().get(0).getValue();
+            assertEquals(2, result.size());
+            ColumnNode firstCol = result.get(0);
             // 应下钻到 users.id（不再是 cte1.uid）
             assertEquals(1, firstCol.getSourceColumns().size());
             assertEquals("users", firstCol.getSourceColumns().get(0).getTableName());
@@ -248,9 +247,9 @@ class SqlLineageParserTest {
             String sql = "WITH a AS (SELECT id FROM t1), " +
                     "     b AS (SELECT id FROM a) " +
                     "SELECT b.id FROM b";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode col = result.getChildren().get(0).getValue();
+            ColumnNode col = result.get(0);
             assertEquals(1, col.getSourceColumns().size());
             assertEquals("t1", col.getSourceColumns().get(0).getTableName());
         }
@@ -259,12 +258,12 @@ class SqlLineageParserTest {
         @DisplayName("解析 CTE SQL 文件 - sqlCte01.sql")
         void testCteFromFile() {
             String sql = SqlFileReader.readSelectSql("sqlCte01.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
             // 输出 4 个字段
-            assertEquals(4, result.getChildren().size());
+            assertEquals(4, result.size());
             // user_name 来源应包含 users.name
-            ColumnNode userNameCol = result.getChildren().get(1).getValue();
+            ColumnNode userNameCol = result.get(1);
             assertTrue(userNameCol.getSourceColumns().stream()
                     .anyMatch(s -> "users".equals(s.getTableName()) && "name".equals(s.getName())));
         }
@@ -278,9 +277,9 @@ class SqlLineageParserTest {
         @DisplayName("子查询作为表源时, 外层引用应下钻到真实表")
         void testNestedSubqueryDrillDown() {
             String sql = "SELECT t.uid FROM (SELECT id AS uid FROM users) t";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode col = result.getChildren().get(0).getValue();
+            ColumnNode col = result.get(0);
             assertEquals(1, col.getSourceColumns().size());
             assertEquals("users", col.getSourceColumns().get(0).getTableName());
             assertEquals("id", col.getSourceColumns().get(0).getName());
@@ -295,9 +294,9 @@ class SqlLineageParserTest {
         @DisplayName("解析 ROW_NUMBER OVER")
         void testRowNumberOver() {
             String sql = "SELECT ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) AS rn FROM emp";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode col = result.getChildren().get(0).getValue();
+            ColumnNode col = result.get(0);
             // PARTITION BY dept_id, ORDER BY salary 都应作为来源列
             assertTrue(col.getSourceColumns().size() >= 2);
         }
@@ -306,9 +305,9 @@ class SqlLineageParserTest {
         @DisplayName("解析 SUM OVER 窗口聚合")
         void testSumOver() {
             String sql = "SELECT user_id, SUM(amount) OVER (PARTITION BY user_id) AS total FROM orders";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode totalCol = result.getChildren().get(1).getValue();
+            ColumnNode totalCol = result.get(1);
             // amount 和 user_id 都应被收集
             assertTrue(totalCol.getSourceColumns().size() >= 2);
         }
@@ -317,10 +316,10 @@ class SqlLineageParserTest {
         @DisplayName("解析窗口函数 SQL 文件 - sqlWindow01.sql")
         void testWindowSqlFromFile() {
             String sql = SqlFileReader.readFunctionSql("sqlWindow01.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
             // 应解析出 7 个输出列
-            assertEquals(7, result.getChildren().size());
+            assertEquals(7, result.size());
         }
     }
 
@@ -332,9 +331,9 @@ class SqlLineageParserTest {
         @DisplayName("LATERAL VIEW explode 输出列下钻到方法参数")
         void testLateralViewExplode() {
             String sql = "SELECT v.item FROM mytable t LATERAL VIEW explode(t.arr) v AS item";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
             assertNotNull(result);
-            ColumnNode col = result.getChildren().get(0).getValue();
+            ColumnNode col = result.get(0);
             assertEquals(1, col.getSourceColumns().size());
             assertEquals("arr", col.getSourceColumns().get(0).getName());
         }
@@ -470,10 +469,10 @@ class SqlLineageParserTest {
             assertEquals("dw", info.getTargetSchema());
             assertEquals("user_summary", info.getTargetTable());
             assertEquals(List.of("user_id", "user_name", "total_amount"), info.getTargetColumns());
-            assertNotNull(info.getSourceLineage());
+            assertNotNull(info.getOutputColumns());
             assertEquals(3, info.getOutputColumnCount());
             // 第 1 列 user_id 应来自 users.id
-            ColumnNode firstSource = info.getSourceLineage().getChildren().get(0).getValue();
+            ColumnNode firstSource = info.getOutputColumns().get(0);
             assertTrue(firstSource.getSourceColumns().stream()
                     .anyMatch(s -> "users".equals(s.getTableName()) && "id".equals(s.getName())));
         }
@@ -532,7 +531,7 @@ class SqlLineageParserTest {
             assertEquals("user_name", info.getTargetColumnAt(1));
             assertEquals("total_amount", info.getTargetColumnAt(2));
             // total_amount 来源应包含 orders.amount
-            ColumnNode totalCol = info.getSourceLineage().getChildren().get(2).getValue();
+            ColumnNode totalCol = info.getOutputColumns().get(2);
             assertTrue(totalCol.getSourceColumns().stream()
                     .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())));
         }
@@ -575,7 +574,7 @@ class SqlLineageParserTest {
             assertEquals("user_name", info.getTargetColumnAt(1));
             assertEquals("total_amount", info.getTargetColumnAt(2));
             // total_amount 应来自 orders.amount
-            ColumnNode totalCol = info.getSourceLineage().getChildren().get(2).getValue();
+            ColumnNode totalCol = info.getOutputColumns().get(2);
             assertTrue(totalCol.getSourceColumns().stream()
                     .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())));
         }
@@ -592,7 +591,7 @@ class SqlLineageParserTest {
             assertEquals(List.of("uid", "total"), info.getTargetColumns());
             assertEquals(2, info.getOutputColumnCount());
             // 第 2 列 total 应来自 orders.amount
-            ColumnNode totalCol = info.getSourceLineage().getChildren().get(1).getValue();
+            ColumnNode totalCol = info.getOutputColumns().get(1);
             assertTrue(totalCol.getSourceColumns().stream()
                     .anyMatch(s -> "orders".equals(s.getTableName()) && "amount".equals(s.getName())));
         }
@@ -624,12 +623,12 @@ class SqlLineageParserTest {
         @DisplayName("解析复杂生产SQL - sqlProd01.sql")
         void testParseComplexProductionSql() {
             String sql = SqlFileReader.readProdSql("sqlProd01.sql");
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertNotNull(result.getChildren());
+            assertNotNull(result);
             // 复杂SQL有多个输出字段
-            assertTrue(result.getChildren().size() > 10);
+            assertTrue(result.size() > 10);
         }
     }
 
@@ -641,70 +640,70 @@ class SqlLineageParserTest {
         @DisplayName("解析SQLPropertyExpr - 表.列表达式")
         void testParseSQLPropertyExpr() {
             String sql = "SELECT t.id, t.name FROM table_a t";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
+            assertEquals(2, result.size());
         }
 
         @Test
         @DisplayName("解析SQLIdentifierExpr - 单列标识符")
         void testParseSQLIdentifierExpr() {
             String sql = "SELECT id, name FROM users";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
+            assertEquals(2, result.size());
         }
 
         @Test
         @DisplayName("解析SQLIntegerExpr - 整数常量")
         void testParseSQLIntegerExpr() {
             String sql = "SELECT 1 AS one, 100 AS hundred FROM dual";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
+            assertEquals(2, result.size());
         }
 
         @Test
         @DisplayName("解析SQLCharExpr - 字符常量")
         void testParseSQLCharExpr() {
             String sql = "SELECT 'hello' AS greeting, 'world' AS target FROM dual";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
+            assertEquals(2, result.size());
         }
 
         @Test
         @DisplayName("解析SQLBinaryOpExpr - 二元运算表达式")
         void testParseSQLBinaryOpExpr() {
             String sql = "SELECT a + b AS sum, a > b AS compare FROM table_x";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
+            assertEquals(2, result.size());
         }
 
         @Test
         @DisplayName("解析SQLAggregateExpr - 聚合函数")
         void testParseSQLAggregateExpr() {
             String sql = "SELECT COUNT(*) AS cnt, SUM(amount) AS total, AVG(price) AS avg_price FROM orders";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(3, result.getChildren().size());
+            assertEquals(3, result.size());
         }
 
         @Test
         @DisplayName("解析SQLMethodInvokeExpr - 方法调用")
         void testParseSQLMethodInvokeExpr() {
             String sql = "SELECT CONCAT(first_name, last_name) AS full_name, UPPER(name) AS upper_name FROM users";
-            TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+            List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
             assertNotNull(result);
-            assertEquals(2, result.getChildren().size());
+            assertEquals(2, result.size());
         }
     }
 }

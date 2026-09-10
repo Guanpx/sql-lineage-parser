@@ -1,8 +1,6 @@
 package com.magic.core.parser.sql.table;
 
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
-import com.magic.sqllineageparser.model.TableNode;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,8 +25,7 @@ public sealed interface BaseTableSourceParser
      *
      * @param dbType         数据库类型
      * @param sequence       序列号
-     * @param parent         父节点
      * @param sqlTableSource SQL表源
      */
-    void process(String dbType, AtomicInteger sequence, TreeNode<TableNode> parent, SQLTableSource sqlTableSource);
+    void process(String dbType, AtomicInteger sequence, SQLTableSource sqlTableSource);
 }

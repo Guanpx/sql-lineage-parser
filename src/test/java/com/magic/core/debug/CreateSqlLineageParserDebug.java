@@ -5,7 +5,6 @@ import com.magic.core.util.SqlFileReader;
 import com.magic.persistence.entity.LineageNode;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.List;
 
@@ -27,15 +26,15 @@ public class CreateSqlLineageParserDebug {
         String sql = SqlFileReader.readProdSql("sqlProd01.sql");
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
+        DebugHelper.printLineageColumns(result);
 
         // 统计信息
-        if (result != null && result.getChildren() != null) {
+        if (result != null) {
             DebugHelper.printSubTitle("统计信息");
-            DebugHelper.printKeyValue("输出列数量", result.getChildren().size());
+            DebugHelper.printKeyValue("输出列数量", result.size());
         }
     }
 
@@ -48,12 +47,12 @@ public class CreateSqlLineageParserDebug {
         String sql = SqlFileReader.readUnionSql("sqlUnion01.sql");
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
 
         if (result == null) {
             DebugHelper.printError("UNION查询当前不支持");
         } else {
-            DebugHelper.printLineageTree(result);
+            DebugHelper.printLineageColumns(result);
         }
     }
 
@@ -64,7 +63,7 @@ public class CreateSqlLineageParserDebug {
         DebugHelper.printTitle("调试自定义SQL");
         DebugHelper.printSql(sql);
 
-//        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+//        List<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
         DmlLineageInfo dmlLineageInfo = SqlLineageParser.parserCreateTableSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
@@ -78,15 +77,14 @@ public class CreateSqlLineageParserDebug {
     private static void lineagePair(DmlLineageInfo info) {
         String targetSchema = info.getTargetSchema();
         String targetTable = info.getTargetTable();
-        List<TreeNode<ColumnNode>> children = info.getSourceLineage().getChildren();
+        List<ColumnNode> children = info.getOutputColumns();
 
         for (int i = 0; i < children.size(); i++) {
             String targetColumn = info.getTargetColumnAt(i);
             LineageNode targetLineageNode = LineageNode.ofColumn(targetSchema, targetTable, targetColumn);
-            TreeNode<ColumnNode> columnNode = children.get(i);
-            ColumnNode value = columnNode.getValue();
+            ColumnNode value = children.get(i);
             System.out.println(value);
-            List<ColumnNode> sourceColumns = columnNode.getValue().getSourceColumns();
+            List<ColumnNode> sourceColumns = value.getSourceColumns();
             for (ColumnNode sourceColumn : sourceColumns) {
                 System.out.println(sourceColumn);
 //                sourceColumn.getAlias();

@@ -2,22 +2,23 @@
 
 > 本文档记录代码审查中发现、但**尚未修复**的问题（P2 / P3）。
 > P1 级两个正确性缺陷已在 2026-07-07 修复（见 UPDATE_DEV.md），不在此列。
+> P2-2 / P2-3 已随 2026-08-27 的 TreeNode 移除重构消除，仅保留条目作历史记录。
 >
 > 每个问题都配有 `known-issues/sql/` 下的验证 SQL，可通过 `SqlLineageParser` 对应入口复现。
-> 「实际输出」为当前代码（含 P1 修复后）的真实运行结果。
+> 「实际输出」为记录时点代码的真实运行结果。
 
 ## 问题索引
 
-| 编号 | 严重度 | 问题 | 验证 SQL |
-|------|--------|------|----------|
-| P2-1 | P2 | 来源列不去重 | `sql/issue-p2-01-duplicate-source-columns.sql` |
-| P2-2 | P2 | TreeNode 兄弟节点 id 相同 + subtreeSize 语义错误 | `sql/issue-p2-02-treenode-id-subtreesize.sql` |
-| P2-3 | P2 | TreeNode.getChildren 注释称不可变但返回可变 list | 无 SQL（API 契约问题） |
-| P3-1 | P3 | 源列表名含 schema，与目标表拆分表示不一致 | `sql/issue-p3-01-table-name-inconsistency.sql` |
-| P3-2 | P3 | SELECT * 目标列名回退为字面量 "*" | `sql/issue-p3-02-select-star-target-name.sql` |
-| P3-3 | P3 | 单表裸列推断误归属（无别名子查询未登记） | `sql/issue-p3-03-single-table-bare-column-misattribution.sql` |
-| P3-4 | P3 | 递归 CTE 未支持 | `sql/issue-p3-04-recursive-cte.sql` |
-| P3-5 | P3 | CTE / 子查询重复解析开销（性能） | 无 SQL（代码级） |
+| 编号 | 严重度 | 问题 | 状态 | 验证 SQL |
+|------|--------|------|------|----------|
+| P2-1 | P2 | 来源列不去重 | 未修复 | `sql/issue-p2-01-duplicate-source-columns.sql` |
+| P2-2 | P2 | TreeNode 兄弟节点 id 相同 + subtreeSize 语义错误 | ✅ 已消除（随 TreeNode 删除） | `sql/issue-p2-02-treenode-id-subtreesize.sql` |
+| P2-3 | P2 | TreeNode.getChildren 注释称不可变但返回可变 list | ✅ 已消除（随 TreeNode 删除） | 无 SQL（API 契约问题） |
+| P3-1 | P3 | 源列表名含 schema，与目标表拆分表示不一致 | 未修复 | `sql/issue-p3-01-table-name-inconsistency.sql` |
+| P3-2 | P3 | SELECT * 目标列名回退为字面量 "*" | 未修复 | `sql/issue-p3-02-select-star-target-name.sql` |
+| P3-3 | P3 | 单表裸列推断误归属（无别名子查询未登记） | 未修复 | `sql/issue-p3-03-single-table-bare-column-misattribution.sql` |
+| P3-4 | P3 | 递归 CTE 未支持 | 未修复 | `sql/issue-p3-04-recursive-cte.sql` |
+| P3-5 | P3 | CTE / 子查询重复解析开销（性能） | 未修复 | 无 SQL（代码级） |
 
 ---
 
@@ -45,7 +46,10 @@ OUT alias=c
 
 ## P2-2 TreeNode 兄弟节点 id 相同 + subtreeSize 语义错误
 
-- **位置**: `sqllineageparser/model/TreeNode.java#addChild`（id 行、subtreeSize 行）
+> **状态：✅ 已消除（2026-08-27）** —— TreeNode 类已随"移除 TreeNode、直接暴露 ColumnNode"重构整体删除，
+> 血缘输出改为 `List<ColumnNode>`，id / subtreeSize 字段不复存在。本条目仅作历史记录。
+
+- **位置**: `sqllineageparser/model/TreeNode.java#addChild`（id 行、subtreeSize 行）（类已删除）
 - **验证 SQL**: `sql/issue-p2-02-treenode-id-subtreesize.sql`
 - **现象**:
   - `childNode.id = this.id + 1` 使同一父节点下所有子节点 id 相同（均为 `parent.id + 1`）；
@@ -69,7 +73,9 @@ root.subtreeSize=3    <-- 扁平树恰好正确；嵌套树只统计直接子节
 
 ## P2-3 getChildren 注释称不可变但返回可变 list
 
-- **位置**: `sqllineageparser/model/TreeNode.java#getChildren`
+> **状态：✅ 已消除（2026-08-27）** —— 随 TreeNode 删除，本条目仅作历史记录。
+
+- **位置**: `sqllineageparser/model/TreeNode.java#getChildren`（类已删除）
 - **验证**: 无 SQL（API 契约问题，代码审查即可确认）
 - **现象**: 注释写「不可变视图」，实际直接返回原始 `children` 引用；调用方可 `getChildren().add(...)` 绕过 `addChild`，破坏 `subtreeSize` 计数。
 - **建议**: 返回 `Collections.unmodifiableList(children)`，或修正注释并保留 `getChildrenMutable()` 作为唯一可变入口。

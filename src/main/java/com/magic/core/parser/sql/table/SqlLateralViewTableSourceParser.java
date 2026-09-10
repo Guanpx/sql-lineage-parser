@@ -4,8 +4,6 @@ import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.expr.SQLMethodInvokeExpr;
 import com.alibaba.druid.sql.ast.statement.SQLLateralViewTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
-import com.magic.sqllineageparser.model.TableNode;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,7 +31,7 @@ public final class SqlLateralViewTableSourceParser implements BaseTableSourcePar
     }
 
     @Override
-    public void process(String dbType, AtomicInteger sequence, TreeNode<TableNode> parent, SQLTableSource sqlTableSource) {
+    public void process(String dbType, AtomicInteger sequence, SQLTableSource sqlTableSource) {
         if (!(sqlTableSource instanceof SQLLateralViewTableSource lateralView)) {
             return;
         }

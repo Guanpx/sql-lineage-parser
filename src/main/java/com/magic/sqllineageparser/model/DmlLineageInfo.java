@@ -15,7 +15,7 @@ import java.util.Map;
  * <p>
  * 描述 INSERT INTO / INSERT OVERWRITE / CTAS 等语句的目标表、目标列与源 SELECT 血缘。
  * <p>
- * 目标列与源列按位置对齐：第 i 个目标列的来源 = {@code sourceLineage} 第 i 个子节点的 sourceColumns。
+ * 目标列与源列按位置对齐：第 i 个目标列的来源 = {@code outputColumns} 第 i 个元素的 sourceColumns。
  *
  * @author Guan Peixiang
  * @since 2026/05/20
@@ -58,11 +58,11 @@ public class DmlLineageInfo {
     private final Map<String, String> partitions = new LinkedHashMap<>();
 
     /**
-     * 源 SELECT 的血缘树根节点。children 为输出列。
+     * 源 SELECT 的输出列列表。每列的 sourceColumns 为其血缘来源。
      */
     @Setter
     @Getter
-    private TreeNode<ColumnNode> sourceLineage;
+    private List<ColumnNode> outputColumns;
 
     public List<String> getTargetColumns() {
         return Collections.unmodifiableList(targetColumns);
@@ -98,7 +98,7 @@ public class DmlLineageInfo {
      * 输出列数
      */
     public int getOutputColumnCount() {
-        return sourceLineage == null ? 0 : sourceLineage.getChildren().size();
+        return outputColumns == null ? 0 : outputColumns.size();
     }
 
     /**
@@ -114,7 +114,7 @@ public class DmlLineageInfo {
         if (index < targetColumns.size()) {
             return targetColumns.get(index);
         }
-        ColumnNode srcCol = sourceLineage.getChildren().get(index).getValue();
+        ColumnNode srcCol = outputColumns.get(index);
         if (srcCol == null) {
             return null;
         }

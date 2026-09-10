@@ -2,8 +2,6 @@ package com.magic.core.parser.sql.table;
 
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
-import com.magic.sqllineageparser.model.TableNode;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -29,7 +27,7 @@ public final class SqlExprTableSourceParser implements BaseTableSourceParser {
     }
 
     @Override
-    public void process(String dbType, AtomicInteger sequence, TreeNode<TableNode> parent, SQLTableSource sqlTableSource) {
+    public void process(String dbType, AtomicInteger sequence, SQLTableSource sqlTableSource) {
         if (!(sqlTableSource instanceof SQLExprTableSource exprTableSource)) {
             return;
         }

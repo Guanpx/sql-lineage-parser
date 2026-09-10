@@ -1,8 +1,6 @@
 package com.magic.core.parser.sql.table;
 
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
-import com.magic.sqllineageparser.model.TableNode;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -28,7 +26,7 @@ public final class SqlWithSubqueryTableSourceParser implements BaseTableSourcePa
     }
 
     @Override
-    public void process(String dbType, AtomicInteger sequence, TreeNode<TableNode> parent, SQLTableSource sqlTableSource) {
+    public void process(String dbType, AtomicInteger sequence, SQLTableSource sqlTableSource) {
         LOGGER.fine("处理 WITH 子查询表源");
     }
 }

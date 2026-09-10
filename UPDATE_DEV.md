@@ -1,5 +1,70 @@
 # UPDATE_DEV.md - 变更记录
 
+## 2026-08-27 移除 TreeNode，血缘输出改为 List&lt;ColumnNode&gt;
+
+### 背景
+
+代码审查确认 TreeNode 未发挥树的作用：血缘"树"永远只有虚拟 root + 输出列两层，来源列实际存于 `ColumnNode.sourceColumns` 扁平列表；全代码库仅使用其 13 个公开 API 中的 `getValue`/`getChildren`；6 个表源解析器 `process()` 的 `parent` 参数无任何实现使用。经评估后实施移除。
+
+### API 变更（breaking）
+
+| 项 | 变更前 | 变更后 |
+|----|--------|--------|
+| `parserSingleSelectSql(sql)` | `TreeNode<ColumnNode>` | `List<ColumnNode>` |
+| `parseSelect(SQLSelect)` | `TreeNode<ColumnNode>` | `List<ColumnNode>` |
+| `DmlLineageInfo.sourceLineage` | `TreeNode<ColumnNode>`（getSourceLineage/setSourceLineage） | `List<ColumnNode> outputColumns`（getOutputColumns/setOutputColumns） |
+| `BaseTableSourceParser.process` | `process(dbType, sequence, parent, tableSource)` | `process(dbType, sequence, tableSource)`（去掉伪 parent 参数） |
+
+消费方式简化：`tree.getChildren().get(i).getValue()` → `list.get(i)`。
+
+### 修改文件
+
+删除：
+```
+src/main/java/com/magic/sqllineageparser/model/TreeNode.java
+```
+
+修改（main）：
+```
+core/parser/SqlLineageParser.java                    # parseSelect/parseQueryBlock/parseUnionQuery/extractColumnSources 全部改 List
+sqllineageparser/model/DmlLineageInfo.java           # sourceLineage → outputColumns；getOutputColumnCount/getTargetColumnAt 适配
+core/parser/sql/dml/SqlInsertParser.java             # setOutputColumns
+core/parser/sql/dml/SqlCreateTableAsParser.java      # setOutputColumns；删除悬空重载 collectColumnDefinitions(DmlLineageInfo)
+core/parser/sql/ddl/SqlCreateViewParser.java         # setOutputColumns
+core/parser/sql/table/BaseTableSourceParser.java     # 接口去 parent 参数
+core/parser/sql/table/Sql*TableSourceParser.java     # 6 个实现同步去 parent / 清理无用 import
+persistence/repository/NebulaLineageRepository.java  # 清理残留 TreeNode import
+```
+
+修改（test/debug）：
+```
+parser/SqlLineageParserTest.java                     # 32 处机械替换（getChildren/getValue/getSourceLineage）
+parser/sql/table/TableSourceParserTest.java          # 4 处调用适配新签名
+debug/DebugHelper.java                               # printLineageTree → printLineageColumns(List<ColumnNode>)
+debug/SqlLineageParserDebug.java / InsertSqlLineageParserDebug.java / CreateSqlLineageParserDebug.java
+```
+
+文档：
+```
+known-issues/KNOWN_ISSUES.md                         # P2-2 / P2-3 标记为已消除（随 TreeNode 删除）
+known-issues/sql/issue-p2-02-treenode-id-subtreesize.sql  # 加历史记录注释
+README.md                                            # API 表 / 示例代码 / 结构示意 / 数据模型表同步；测试数 89
+```
+
+### 验证
+
+- `mvn test` BUILD SUCCESS，89 用例全绿（重构前后数量不变，无行为变化）
+- 端到端探针比对：SELECT 三列血缘、INSERT 目标列对齐、UNION 合并输出与重构前完全一致
+- 全库 `grep TreeNode` 无残留（仅 ColumnNode.tableTreeNodeId 字段名，属历史字段未动）
+
+### 顺带收益
+
+- 直接消除 KNOWN_ISSUES 的 P2-2（兄弟节点 id 相同 / subtreeSize 语义错）与 P2-3（getChildren 可变性）两个问题
+- 删除 SqlCreateTableAsParser 中从未被调用的悬空重载方法
+- 表源解析器接口去掉无用的 parent 参数，语义更诚实
+
+---
+
 ## 2026-08-27 代码审查修复 P1 缺陷 + 归档 P2/P3
 
 ### 概述

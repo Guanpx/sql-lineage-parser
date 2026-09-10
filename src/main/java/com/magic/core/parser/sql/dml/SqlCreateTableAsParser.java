@@ -5,10 +5,8 @@ import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableElement;
 import com.magic.core.parser.SqlLineageParser;
-import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.DmlOperation;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,9 +47,9 @@ public final class SqlCreateTableAsParser {
             info.setTargetSchema(ts.getSchema());
             info.setTargetTable(ts.getTableName());
         }
-        info.setSourceLineage(SqlLineageParser.parseSelect(stmt.getSelect()));
+        info.setOutputColumns(SqlLineageParser.parseSelect(stmt.getSelect()));
 
-        // 解析CTAS的声明列
+        // 解析CTAS的声明列；无声明列时由 getTargetColumnAt 回退到 SELECT 输出名
         if(stmt.getTableElementList() != null && !stmt.getTableElementList().isEmpty()){
             collectColumnDefinitions(stmt, info);
         }
@@ -60,22 +58,13 @@ public final class SqlCreateTableAsParser {
     }
 
     /**
-     * stmt.getTableElementList().isEmpty()
-     * 对应CATS无声明列的情况，此时会从select获取补充(下重载方法)
+     * 从 CREATE TABLE 的声明列定义中提取目标列名
      */
     private static void collectColumnDefinitions(SQLCreateTableStatement stmt, DmlLineageInfo info) {
         for (SQLTableElement element : stmt.getTableElementList()) {
             if (element instanceof SQLColumnDefinition column && column.getName() != null) {
                 info.addTargetColumn(stripIdentifier(column.getName().getSimpleName()));
             }
-        }
-    }
-
-    private static void collectColumnDefinitions(DmlLineageInfo info) {
-        TreeNode<ColumnNode> sourceLineage = info.getSourceLineage();
-        for (TreeNode<ColumnNode> element : sourceLineage.getChildren()) {
-            ColumnNode columnNode = element.getValue();
-            info.addTargetColumn(columnNode.getAlias() == null ? columnNode.getName() : columnNode.getAlias());
         }
     }
 

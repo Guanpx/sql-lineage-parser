@@ -5,7 +5,6 @@ import com.alibaba.druid.sql.ast.statement.SQLSelectItem;
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
-import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.List;
 
@@ -69,17 +68,15 @@ public final class DebugHelper {
         }
     }
 
-    public static void printLineageTree(TreeNode<ColumnNode> root) {
-        printLineageTree(root, 0);
+    public static void printLineageColumns(List<ColumnNode> columns) {
+        printLineageColumns(columns, 0);
     }
 
-    private static void printLineageTree(TreeNode<ColumnNode> node, int depth) {
-        if (node == null) return;
+    private static void printLineageColumns(List<ColumnNode> columns, int depth) {
+        if (columns == null) return;
 
         String indent = "  ".repeat(depth);
-        ColumnNode value = node.getValue();
-
-        if (value != null) {
+        for (ColumnNode value : columns) {
             System.out.println(indent + "├─ " + value.getName());
             System.out.println(indent + "│  别名: " + value.getAlias());
             System.out.println(indent + "│  表名: " + value.getTableName());
@@ -98,14 +95,6 @@ public final class DebugHelper {
                     System.out.println(indent + "│    → " + srcInfo);
                 }
             }
-        } else {
-            System.out.println(indent + "├─ [ROOT]");
-        }
-
-        if (node.getChildren() != null) {
-            for (TreeNode<ColumnNode> child : node.getChildren()) {
-                printLineageTree(child, depth + 1);
-            }
         }
     }
 
@@ -116,9 +105,7 @@ public final class DebugHelper {
         System.out.println(data.getTargetColumnAt(1));
         System.out.println("00000");
 
-        TreeNode<ColumnNode> root = data.getSourceLineage();
-
-        printLineageTree(root, 0);
+        printLineageColumns(data.getOutputColumns(), 0);
     }
 
     public static void printKeyValue(String key, Object value) {
