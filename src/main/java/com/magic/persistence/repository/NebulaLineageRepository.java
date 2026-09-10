@@ -4,6 +4,9 @@ import com.magic.persistence.config.GraphDbConfig;
 import com.magic.persistence.entity.LineageEdge;
 import com.magic.persistence.entity.LineageGraph;
 import com.magic.persistence.entity.LineageNode;
+import com.magic.sqllineageparser.model.ColumnNode;
+import com.magic.sqllineageparser.model.DmlLineageInfo;
+import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.Collections;
 import java.util.List;
@@ -231,4 +234,18 @@ public class NebulaLineageRepository implements LineageRepository {
         // }
         LOGGER.fine(() -> "[预留] 待执行 nGQL: " + ngql);
     }
+
+
+
+
+    // 封装CTAS语句的血缘
+
+
+
+
+
+
+
+
+
 }

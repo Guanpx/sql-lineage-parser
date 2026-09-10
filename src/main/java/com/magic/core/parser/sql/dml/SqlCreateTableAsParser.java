@@ -17,7 +17,8 @@ import java.util.logging.Logger;
  * CREATE TABLE AS SELECT (CTAS) 语句解析器
  * <p>
  * 复用 {@link SqlLineageParser#parseSelect} 解析 AS SELECT 子查询的列血缘，
- * 目标列从 CTAS 中的声明列提取(table body)，否则按 AS SELECT 查询的别名兜底。
+ * <p>
+ * 在 {@link DmlLineageInfo#getTargetColumnAt(int)} 统一处理血缘映射：AS SELECT 列 => CTAS 目标列
  *
  * @author Guan Peixiang
  * @since 2026/05/20
@@ -33,7 +34,7 @@ public final class SqlCreateTableAsParser {
      * 解析 CREATE TABLE AS SELECT 语句
      *
      * @param stmt Druid 解析得到的 SQLCreateTableStatement
-     * @return DML 血缘信息；非 CTAS（无AS SELECT子句）返回 null, 如果CTAS不指名列则取SELECT全部列
+     * @return DML 血缘信息；非CTAS（无AS SELECT子句）返回 null
      */
     public static DmlLineageInfo parse(SQLCreateTableStatement stmt) {
         if (stmt == null || stmt.getSelect() == null) {
@@ -51,9 +52,7 @@ public final class SqlCreateTableAsParser {
         info.setSourceLineage(SqlLineageParser.parseSelect(stmt.getSelect()));
 
         // 解析CTAS的声明列
-        if(stmt.getTableElementList() == null || stmt.getTableElementList().isEmpty()){
-            collectColumnDefinitions(info);
-        } else {
+        if(stmt.getTableElementList() != null && !stmt.getTableElementList().isEmpty()){
             collectColumnDefinitions(stmt, info);
         }
         LOGGER.log(Level.FINE, () -> "CTAS 解析完成: " + info);

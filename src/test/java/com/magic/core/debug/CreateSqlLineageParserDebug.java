@@ -2,9 +2,12 @@ package com.magic.core.debug;
 
 import com.magic.core.parser.SqlLineageParser;
 import com.magic.core.util.SqlFileReader;
+import com.magic.persistence.entity.LineageNode;
 import com.magic.sqllineageparser.model.ColumnNode;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.TreeNode;
+
+import java.util.List;
 
 /**
  * CreateSqlLineageParserDebug 调试类
@@ -66,17 +69,46 @@ public class CreateSqlLineageParserDebug {
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
         DebugHelper.printCreateLineageTree(dmlLineageInfo);
+
+        lineagePair(dmlLineageInfo);
+
+
+    }
+
+    private static void lineagePair(DmlLineageInfo info) {
+        String targetSchema = info.getTargetSchema();
+        String targetTable = info.getTargetTable();
+        List<TreeNode<ColumnNode>> children = info.getSourceLineage().getChildren();
+
+        for (int i = 0; i < children.size(); i++) {
+            String targetColumn = info.getTargetColumnAt(i);
+            LineageNode targetLineageNode = LineageNode.ofColumn(targetSchema, targetTable, targetColumn);
+            TreeNode<ColumnNode> columnNode = children.get(i);
+            ColumnNode value = columnNode.getValue();
+            System.out.println(value);
+            List<ColumnNode> sourceColumns = columnNode.getValue().getSourceColumns();
+            for (ColumnNode sourceColumn : sourceColumns) {
+                System.out.println(sourceColumn);
+//                sourceColumn.getAlias();
+//                sourceColumn.getTableName();
+                sourceColumn.getName();
+
+
+
+
+            }
+        }
     }
 
     public static void main(String[] args) {
 
-//        debugComplexSql();
+    //        debugComplexSql();
 
         String sql = """
-               create table sss(aaa, ddd) AS
+               create table sss AS
                select ad, bc
                from
-               (select ad, xx AS bc from table_2)
+               (select ad, xx AS bc from dm.table_2)
                x
                """;
         debugCustomSql(sql);

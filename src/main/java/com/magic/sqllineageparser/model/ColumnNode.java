@@ -76,4 +76,18 @@ public class ColumnNode {
         sourceColumns.add(source);
     }
 
+    @Override
+    public String toString() {
+        return "ColumnNode{" +
+                "owner=" + owner +
+                ", tableName='" + tableName + '\'' +
+                ", name='" + name + '\'' +
+                ", alias='" + alias + '\'' +
+                ", sourceColumns=" + sourceColumns +
+                ", expression='" + expression + '\'' +
+                ", tableTreeNodeId=" + tableTreeNodeId +
+                ", tableExpression='" + tableExpression + '\'' +
+                ", constant=" + constant +
+                '}';
+    }
 }

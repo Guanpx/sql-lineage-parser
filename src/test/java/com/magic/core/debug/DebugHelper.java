@@ -112,8 +112,12 @@ public final class DebugHelper {
 
     public static void printCreateLineageTree(DmlLineageInfo data) {
         System.out.println(data);
+        System.out.println(data.getTargetColumnAt(0));
+        System.out.println(data.getTargetColumnAt(1));
+        System.out.println("00000");
 
         TreeNode<ColumnNode> root = data.getSourceLineage();
+
         printLineageTree(root, 0);
     }
 
