@@ -4,6 +4,7 @@ import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.statement.SQLSelectItem;
 import com.alibaba.druid.sql.ast.statement.SQLTableSource;
 import com.magic.sqllineageparser.model.ColumnNode;
+import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.TreeNode;
 
 import java.util.List;
@@ -11,8 +12,6 @@ import java.util.List;
 /**
  * 调试输出辅助类
  * 用于开发时打印解析结果
- *
- * @author Debug
  */
 public final class DebugHelper {
 
@@ -108,6 +107,14 @@ public final class DebugHelper {
                 printLineageTree(child, depth + 1);
             }
         }
+    }
+
+
+    public static void printCreateLineageTree(DmlLineageInfo data) {
+        System.out.println(data);
+
+        TreeNode<ColumnNode> root = data.getSourceLineage();
+        printLineageTree(root, 0);
     }
 
     public static void printKeyValue(String key, Object value) {

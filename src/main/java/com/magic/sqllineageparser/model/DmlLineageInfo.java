@@ -1,5 +1,6 @@
 package com.magic.sqllineageparser.model;
 
+import com.magic.core.utils.StringUtils;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -118,43 +119,50 @@ public class DmlLineageInfo {
             return null;
         }
         if (srcCol.getAlias() != null && !srcCol.getAlias().isEmpty()) {
-            return stripQuotes(srcCol.getAlias());
+            return StringUtils.stripQuotes(srcCol.getAlias());
         }
         return extractNameFromExpression(srcCol.getExpression());
     }
 
+    /**
+     * 去除. 以及反引号
+     * @param expression 入参字段
+     * @return 去除. 以及反引号的数据
+     */
     private static String extractNameFromExpression(String expression) {
         if (expression == null) {
             return null;
         }
         int dot = expression.lastIndexOf('.');
         String name = dot >= 0 ? expression.substring(dot + 1) : expression;
-        name = stripQuotes(name.trim());
+        name = StringUtils.stripQuotes(name.trim());
         if (name.isEmpty() || name.contains("(") || name.contains(" ")) {
             return null;
         }
         return name;
     }
 
-    private static String stripQuotes(String raw) {
-        if (raw == null || raw.length() < 2) {
-            return raw;
-        }
-        char first = raw.charAt(0);
-        char last = raw.charAt(raw.length() - 1);
-        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-            return raw.substring(1, raw.length() - 1);
-        }
-        return raw;
-    }
-
     @Override
     public String toString() {
-        return "DmlLineageInfo{" + operation
-                + " " + getQualifiedTargetTable()
-                + (targetColumns.isEmpty() ? "" : " " + targetColumns)
-                + (partitions.isEmpty() ? "" : " PARTITION " + partitions)
-                + ", outputs=" + getOutputColumnCount()
-                + '}';
+
+        String columnsPart = targetColumns.isEmpty() ? "" : " " + targetColumns;
+        String partitionsPart = partitions.isEmpty() ? "" : " PARTITION " + partitions;
+
+        return """
+        DmlLineageInfo{op:%s, table:%s{%s}, outputColumnCount:%d, cols:%s}
+        """
+                .formatted(operation, getQualifiedTargetTable(), partitionsPart, getOutputColumnCount()
+                        ,targetColumns
+                        );
+
+//        return "DmlLineageInfo{" + operation
+//                + " table: " + getQualifiedTargetTable()
+//                + (targetColumns.isEmpty() ? "" : " " + targetColumns)
+//                + (partitions.isEmpty() ? "" : " PARTITION " + partitions)
+//                + ", outputs=" + getOutputColumnCount()
+//                + '}';
+
+
+
     }
 }

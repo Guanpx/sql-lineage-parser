@@ -7,124 +7,13 @@ import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.TreeNode;
 
 /**
- * SqlLineageParser 调试类
+ * CreateSqlLineageParserDebug 调试类
  * 用于开发时调试核心解析器的解析结果
  *
  * @author Debug
  */
 public class CreateSqlLineageParserDebug {
 
-    public static void main(String[] args) {
-        // 选择要调试的场景
-//        debugSimpleSelect();
-//        debugCaseWhen();
-        debugJoinQuery();
-//        debugFunctionExpr();
-//        debugComplexSql();
-    }
-
-    /**
-     * 调试简单SELECT语句
-     */
-    public static void debugSimpleSelect() {
-        DebugHelper.printTitle("调试简单SELECT语句");
-
-        String sql = "SELECT id, name, age FROM users WHERE id > 10";
-        DebugHelper.printSql(sql);
-
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
-
-        DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
-    }
-
-    /**
-     * 调试带别名的SELECT
-     */
-    public static void debugSelectWithAlias() {
-        DebugHelper.printTitle("调试带别名的SELECT");
-
-        String sql = "SELECT t.id AS user_id, t.name AS user_name, CONCAT(t.first, t.last) AS full_name FROM users t";
-        DebugHelper.printSql(sql);
-
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
-
-        DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
-    }
-
-    /**
-     * 调试CASE WHEN语句
-     * case all
-     * case123 todo
-     */
-    public static void debugCaseWhen() {
-        DebugHelper.printTitle("调试CASE WHEN语句");
-
-        // 从文件读取
-//        String sql = SqlFileReader.readCaseSql("sqlcase02.sql");
-//        String sql = SqlFileReader.readCaseSql("sqlcase03.sql");
-        String sql = SqlFileReader.readCaseSql("sqlcase04.sql");
-//        String sql = SqlFileReader.readCaseSql("sqlcase1.sql");
-        DebugHelper.printSql(sql);
-
-        // TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
-        DmlLineageInfo dmlLineageInfo = SqlLineageParser.parserInsertSql(sql);
-         System.out.println(dmlLineageInfo.getTargetTable());
-
-
-//        DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(dmlLineageInfo.getSourceLineage());
-    }
-
-    /**
-     * 调试JOIN查询
-     */
-    public static void debugJoinQuery() {
-        DebugHelper.printTitle("调试JOIN查询");
-
-        // 简单JOIN
-        String sql1 = SqlFileReader.readJoinSql("sqlJoin01.sql");
-        DebugHelper.printSql(sql1);
-        DebugHelper.printSubTitle("sqlJoin01 解析结果");
-        TreeNode<ColumnNode> result1 = SqlLineageParser.parserSingleSelectSql(sql1);
-        DebugHelper.printLineageTree(result1);
-
-        // 带子查询的JOIN
-        String sql2 = SqlFileReader.readJoinSql("sqlJoin02.sql");
-        DebugHelper.printSql(sql2);
-        DebugHelper.printSubTitle("sqlJoin02 解析结果");
-        TreeNode<ColumnNode> result2 = SqlLineageParser.parserSingleSelectSql(sql2);
-        DebugHelper.printLineageTree(result2);
-    }
-
-    /**
-     * 调试函数表达式
-     */
-    public static void debugFunctionExpr() {
-        DebugHelper.printTitle("调试函数表达式");
-
-        // IF函数
-        DebugHelper.printSubTitle("IF函数");
-        String sql1 = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc01.sql");
-        DebugHelper.printSql(sql1);
-        TreeNode<ColumnNode> result1 = SqlLineageParser.parserSingleSelectSql(sql1);
-        DebugHelper.printLineageTree(result1);
-
-        // MAX+IF嵌套
-        DebugHelper.printSubTitle("MAX+IF嵌套函数");
-        String sql2 = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc02.sql");
-        DebugHelper.printSql(sql2);
-        TreeNode<ColumnNode> result2 = SqlLineageParser.parserSingleSelectSql(sql2);
-        DebugHelper.printLineageTree(result2);
-
-        // NVL函数
-        DebugHelper.printSubTitle("NVL函数");
-        String sql3 = SqlFileReader.readFunctionSql("sqlMaxIfNvlFunc03.sql");
-        DebugHelper.printSql(sql3);
-        TreeNode<ColumnNode> result3 = SqlLineageParser.parserSingleSelectSql(sql3);
-        DebugHelper.printLineageTree(result3);
-    }
 
     /**
      * 调试复杂生产SQL
@@ -172,9 +61,26 @@ public class CreateSqlLineageParserDebug {
         DebugHelper.printTitle("调试自定义SQL");
         DebugHelper.printSql(sql);
 
-        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+//        TreeNode<ColumnNode> result = SqlLineageParser.parserSingleSelectSql(sql);
+        DmlLineageInfo dmlLineageInfo = SqlLineageParser.parserCreateTableSql(sql);
 
         DebugHelper.printSubTitle("解析结果 - 血缘树");
-        DebugHelper.printLineageTree(result);
+        DebugHelper.printCreateLineageTree(dmlLineageInfo);
     }
+
+    public static void main(String[] args) {
+
+//        debugComplexSql();
+
+        String sql = """
+               create table sss(aaa, ddd) AS
+               select ad, bc
+               from
+               (select ad, xx AS bc from table_2)
+               x
+               """;
+        debugCustomSql(sql);
+    }
+
+
 }

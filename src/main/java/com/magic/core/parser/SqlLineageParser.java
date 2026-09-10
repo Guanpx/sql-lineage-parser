@@ -476,7 +476,7 @@ public final class SqlLineageParser {
      */
     private static String visibleColumnName(ColumnNode column) {
         if (!StringUtils.isEmpty(column.getAlias())) {
-            return stripQuotes(column.getAlias());
+            return StringUtils.stripQuotes(column.getAlias());
         }
         String expr = column.getExpression();
         if (expr == null) {
@@ -484,22 +484,12 @@ public final class SqlLineageParser {
         }
         int dot = expr.lastIndexOf('.');
         String name = dot >= 0 ? expr.substring(dot + 1) : expr;
-        name = stripQuotes(name.trim());
+        name = StringUtils.stripQuotes(name.trim());
         if (name.isEmpty() || name.contains("(") || name.contains(" ")) {
             return null;
         }
         return name;
     }
 
-    private static String stripQuotes(String raw) {
-        if (raw == null || raw.length() < 2) {
-            return raw;
-        }
-        char first = raw.charAt(0);
-        char last = raw.charAt(raw.length() - 1);
-        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-            return raw.substring(1, raw.length() - 1);
-        }
-        return raw;
-    }
+
 }

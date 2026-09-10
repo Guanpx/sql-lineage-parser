@@ -30,4 +30,23 @@ public final class StringUtils {
     public static boolean isNotEmpty(String str) {
         return !isEmpty(str);
     }
+
+    /**
+     * 去除字段的反引号
+     * TODO 参考simplify()方法
+     * @param raw 入参
+     * @return 去除字段的反引号
+     */
+    public static String stripQuotes(String raw) {
+        if (raw == null || raw.length() < 2) {
+            return raw;
+        }
+        char first = raw.charAt(0);
+        char last = raw.charAt(raw.length() - 1);
+        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
+            return raw.substring(1, raw.length() - 1);
+        }
+        return raw;
+    }
+
 }
