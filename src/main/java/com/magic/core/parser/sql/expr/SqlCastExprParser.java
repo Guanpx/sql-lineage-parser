@@ -10,7 +10,7 @@ import java.util.logging.Logger;
  * CAST 的源列就是被强制类型转换的表达式，递归解析即可
  *
  * @author Guan Peixiang
- * @since 2026/05/19
+ * @since 2023/12/21
  */
 public final class SqlCastExprParser implements BaseSqlExprParser {
 
@@ -24,9 +24,6 @@ public final class SqlCastExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析 CAST 表达式，递归解析其被转换的子表达式
-     */
     public static void parse(SQLCastExpr expr, ExprParseContext context) {
         if (expr == null) {
             return;

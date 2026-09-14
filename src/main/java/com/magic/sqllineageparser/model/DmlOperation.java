@@ -4,7 +4,7 @@ package com.magic.sqllineageparser.model;
  * DML 操作类型
  *
  * @author Guan Peixiang
- * @since 2026/05/20
+ * @since 2023/12/22
  */
 public enum DmlOperation {
 

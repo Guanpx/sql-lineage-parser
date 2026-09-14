@@ -10,6 +10,9 @@ import java.util.List;
 
 /**
  * 数据血缘解析时表节点
+ *
+ * @author Guan Peixiang
+ * @since 2023/9/12
  */
 @Data
 @AllArgsConstructor

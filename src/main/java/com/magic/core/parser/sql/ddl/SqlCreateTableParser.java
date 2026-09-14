@@ -5,6 +5,7 @@ import com.alibaba.druid.sql.ast.expr.SQLCharExpr;
 import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
+import com.magic.core.utils.StringUtils;
 import com.magic.sqllineageparser.model.CreateTableInfo;
 import com.magic.sqllineageparser.model.TableColumnMeta;
 
@@ -18,7 +19,7 @@ import java.util.logging.Logger;
  * CREATE TABLE AS SELECT 的数据血缘由 SqlCreateTableAsParser 处理。
  *
  * @author Guan Peixiang
- * @since 2026/08/26
+ * @since 2026/05/19
  */
 public final class SqlCreateTableParser {
 
@@ -73,7 +74,7 @@ public final class SqlCreateTableParser {
         }
         String dataType = column.getDataType() == null ? null : column.getDataType().toString();
         return TableColumnMeta.of(
-                stripIdentifier(column.getName().getSimpleName()),
+                StringUtils.stripQuotes(column.getName().getSimpleName()),
                 dataType,
                 extractText(column.getComment()),
                 column.getDefaultExpr() == null ? null : column.getDefaultExpr().toString(),
@@ -91,15 +92,4 @@ public final class SqlCreateTableParser {
         return expr.toString();
     }
 
-    private static String stripIdentifier(String raw) {
-        if (raw == null || raw.length() < 2) {
-            return raw;
-        }
-        char first = raw.charAt(0);
-        char last = raw.charAt(raw.length() - 1);
-        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-            return raw.substring(1, raw.length() - 1);
-        }
-        return raw;
-    }
 }

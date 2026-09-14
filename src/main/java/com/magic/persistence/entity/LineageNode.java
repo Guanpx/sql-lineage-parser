@@ -136,8 +136,6 @@ public class LineageNode {
                 columnName);
     }
 
-    // Getters and Setters
-
     public void addProperty(String key, Object value) {
         this.properties.put(key, value);
     }

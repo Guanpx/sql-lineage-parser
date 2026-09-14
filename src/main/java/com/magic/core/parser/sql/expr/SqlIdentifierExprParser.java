@@ -22,17 +22,10 @@ public final class SqlIdentifierExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析列标识符，收集结果到上下文
-     *
-     * @param expr    列标识符表达式
-     * @param context 解析上下文
-     */
     public static void parse(SQLIdentifierExpr expr, ExprParseContext context) {
         String columnName = expr.getName();
         LOGGER.fine(() -> "列标识符: " + columnName);
 
-        // 无表名的列引用
         context.addColumnReference(columnName);
     }
 

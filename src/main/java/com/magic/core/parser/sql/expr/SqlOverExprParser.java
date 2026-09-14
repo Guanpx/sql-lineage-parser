@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  * 将其作为来源列收集到上下文。
  *
  * @author Guan Peixiang
- * @since 2026/05/19
+ * @since 2023/12/21
  */
 public final class SqlOverExprParser implements BaseSqlExprParser {
 
@@ -29,19 +29,12 @@ public final class SqlOverExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析 OVER 子句中的所有引用列
-     *
-     * @param over    OVER 子句
-     * @param context 解析上下文
-     */
     public static void parse(SQLOver over, ExprParseContext context) {
         if (over == null) {
             return;
         }
         LOGGER.fine("解析 OVER 子句");
 
-        // PARTITION BY 列
         List<SQLExpr> partitionBy = over.getPartitionBy();
         if (partitionBy != null) {
             for (SQLExpr expr : partitionBy) {
@@ -49,7 +42,6 @@ public final class SqlOverExprParser implements BaseSqlExprParser {
             }
         }
 
-        // ORDER BY / DISTRIBUTE BY / SORT BY / CLUSTER BY
         parseOrderBy(over.getOrderBy(), context);
         parseOrderBy(over.getDistributeBy(), context);
         parseOrderBy(over.getSortBy(), context);

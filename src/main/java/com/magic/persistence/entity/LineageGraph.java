@@ -89,8 +89,6 @@ public class LineageGraph {
         addEdge(new LineageEdge(source.getId(), target.getId(), relationshipType));
     }
 
-    // Getters and Setters
-
     @Override
     public String toString() {
         return "LineageGraph{" +

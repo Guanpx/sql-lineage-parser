@@ -16,8 +16,6 @@ import java.util.List;
  */
 public interface LineageRepository {
 
-    // ==================== 连接管理 ====================
-
     /**
      * 初始化连接
      */
@@ -34,8 +32,6 @@ public interface LineageRepository {
      * @return true 如果连接正常
      */
     boolean isConnected();
-
-    // ==================== 节点操作 ====================
 
     /**
      * 保存单个节点
@@ -74,8 +70,6 @@ public interface LineageRepository {
      */
     void deleteNode(String nodeId);
 
-    // ==================== 边操作 ====================
-
     /**
      * 保存单条边
      *
@@ -105,8 +99,6 @@ public interface LineageRepository {
      * @return 下游节点列表
      */
     List<LineageNode> findDownstream(String nodeId);
-
-    // ==================== 图操作 ====================
 
     /**
      * 保存完整的血缘图（包括所有节点和边）

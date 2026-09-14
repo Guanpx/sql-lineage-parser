@@ -6,8 +6,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 表源解析器基础接口 (密封接口)
- * <p>
- * 使用 Java 17 sealed interface 限制实现类，提供更好的类型安全
  *
  * @author Guan Peixiang
  * @since 2023/9/12
@@ -20,12 +18,5 @@ public sealed interface BaseTableSourceParser
         SqlWithSubqueryTableSourceParser,
         SqlLateralViewTableSourceParser {
 
-    /**
-     * 处理表源解析
-     *
-     * @param dbType         数据库类型
-     * @param sequence       序列号
-     * @param sqlTableSource SQL表源
-     */
     void process(String dbType, AtomicInteger sequence, SQLTableSource sqlTableSource);
 }

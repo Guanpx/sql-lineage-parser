@@ -23,12 +23,6 @@ public final class SqlCaseExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析 CASE WHEN 表达式，收集结果到上下文
-     *
-     * @param expr    CASE WHEN 表达式
-     * @param context 解析上下文
-     */
     public static void parse(SQLCaseExpr expr, ExprParseContext context) {
         LOGGER.fine("解析 CASE WHEN 表达式");
 
@@ -38,18 +32,15 @@ public final class SqlCaseExprParser implements BaseSqlExprParser {
             BaseSqlExprParser.parserSqlExpr(expr.getValueExpr(), context);
         }
 
-        // 解析各个 WHEN 分支
         for (SQLCaseExpr.Item item : expr.getItems()) {
             // WHEN 条件表达式中的列引用也影响输出取值，纳入血缘来源
             if (item.getConditionExpr() != null) {
                 LOGGER.log(Level.FINER, () -> "WHEN 条件: " + item.getConditionExpr());
                 BaseSqlExprParser.parserSqlExpr(item.getConditionExpr(), context);
             }
-            // THEN 取值表达式
             BaseSqlExprParser.parserSqlExpr(item.getValueExpr(), context);
         }
 
-        // 解析 ELSE 分支
         if (expr.getElseExpr() != null) {
             LOGGER.finer("解析 ELSE 分支");
             BaseSqlExprParser.parserSqlExpr(expr.getElseExpr(), context);

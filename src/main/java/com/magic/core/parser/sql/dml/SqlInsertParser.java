@@ -7,6 +7,7 @@ import com.alibaba.druid.sql.ast.statement.SQLAssignItem;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLInsertStatement;
 import com.magic.core.parser.SqlLineageParser;
+import com.magic.core.utils.StringUtils;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.DmlOperation;
 
@@ -21,7 +22,7 @@ import java.util.logging.Logger;
  * 解析源 SELECT 的列血缘。
  *
  * @author Guan Peixiang
- * @since 2026/05/20
+ * @since 2023/12/22
  */
 public final class SqlInsertParser {
 
@@ -88,23 +89,11 @@ public final class SqlInsertParser {
 
     private static String identifierName(SQLExpr expr) {
         if (expr instanceof SQLIdentifierExpr id) {
-            return stripIdentifier(id.getName());
+            return StringUtils.stripQuotes(id.getName());
         }
         if (expr instanceof SQLPropertyExpr p) {
-            return stripIdentifier(p.getName());
+            return StringUtils.stripQuotes(p.getName());
         }
-        return expr != null ? stripIdentifier(expr.toString()) : null;
-    }
-
-    private static String stripIdentifier(String raw) {
-        if (raw == null || raw.length() < 2) {
-            return raw;
-        }
-        char first = raw.charAt(0);
-        char last = raw.charAt(raw.length() - 1);
-        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-            return raw.substring(1, raw.length() - 1);
-        }
-        return raw;
+        return expr != null ? StringUtils.stripQuotes(expr.toString()) : null;
     }
 }

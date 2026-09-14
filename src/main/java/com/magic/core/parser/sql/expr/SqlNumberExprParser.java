@@ -22,17 +22,10 @@ public final class SqlNumberExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析数字常量，收集结果到上下文
-     *
-     * @param expr    数字常量表达式
-     * @param context 解析上下文
-     */
     public static void parse(SQLNumberExpr expr, ExprParseContext context) {
         String value = String.valueOf(expr.getNumber());
         LOGGER.fine(() -> "数字常量: " + value);
 
-        // 常量值
         context.addConstantSource(value);
     }
 

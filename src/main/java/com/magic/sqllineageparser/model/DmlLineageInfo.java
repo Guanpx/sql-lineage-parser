@@ -18,7 +18,7 @@ import java.util.Map;
  * 目标列与源列按位置对齐：第 i 个目标列的来源 = {@code outputColumns} 第 i 个元素的 sourceColumns。
  *
  * @author Guan Peixiang
- * @since 2026/05/20
+ * @since 2023/12/22
  */
 public class DmlLineageInfo {
 
@@ -144,8 +144,6 @@ public class DmlLineageInfo {
 
     @Override
     public String toString() {
-
-        String columnsPart = targetColumns.isEmpty() ? "" : " " + targetColumns;
         String partitionsPart = partitions.isEmpty() ? "" : " PARTITION " + partitions;
 
         return """
@@ -154,15 +152,5 @@ public class DmlLineageInfo {
                 .formatted(operation, getQualifiedTargetTable(), partitionsPart, getOutputColumnCount()
                         ,targetColumns
                         );
-
-//        return "DmlLineageInfo{" + operation
-//                + " table: " + getQualifiedTargetTable()
-//                + (targetColumns.isEmpty() ? "" : " " + targetColumns)
-//                + (partitions.isEmpty() ? "" : " PARTITION " + partitions)
-//                + ", outputs=" + getOutputColumnCount()
-//                + '}';
-
-
-
     }
 }

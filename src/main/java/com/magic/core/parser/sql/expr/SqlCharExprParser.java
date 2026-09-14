@@ -22,17 +22,10 @@ public final class SqlCharExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析字符常量，收集结果到上下文
-     *
-     * @param expr    字符常量表达式
-     * @param context 解析上下文
-     */
     public static void parse(SQLCharExpr expr, ExprParseContext context) {
         String value = "'" + expr.getText() + "'";
         LOGGER.fine(() -> "字符常量: " + value);
 
-        // 常量值
         context.addConstantSource(value);
     }
 

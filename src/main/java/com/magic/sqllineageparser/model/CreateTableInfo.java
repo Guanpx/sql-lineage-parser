@@ -13,7 +13,7 @@ import java.util.List;
  * 该模型只描述表结构元信息；带 AS SELECT 的 CTAS 血缘仍使用 {@link DmlLineageInfo}。
  *
  * @author Guan Peixiang
- * @since 2026/08/26
+ * @since 2023/12/22
  */
 public class CreateTableInfo {
 

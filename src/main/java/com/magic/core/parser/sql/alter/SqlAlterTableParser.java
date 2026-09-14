@@ -11,6 +11,7 @@ import com.alibaba.druid.sql.ast.statement.SQLAlterTableRenameColumn;
 import com.alibaba.druid.sql.ast.statement.SQLAlterTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
+import com.magic.core.utils.StringUtils;
 import com.magic.sqllineageparser.model.AlterColumnChange;
 import com.magic.sqllineageparser.model.AlterTableInfo;
 
@@ -18,9 +19,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ALTER TABLE 语句解析器
+ * 新增ALTER TABLE 语句解析器
  * <p>
- * 解析 Hive / 标准 SQL 的 ALTER TABLE 语句，支持
+ * 解析 Hive SQL的ALTER TABLE语句，支持
  * ADD COLUMNS / DROP COLUMN / RENAME COLUMN / CHANGE COLUMN 等结构变更。
      * CHANGE COLUMN 在结果模型中统一表达为 MODIFY 动作。
  *
@@ -67,26 +68,26 @@ public final class SqlAlterTableParser {
     private static void parseItem(SQLAlterTableItem item, AlterTableInfo info) {
         if (item instanceof SQLAlterTableAddColumn addColumn) {
             for (SQLColumnDefinition column : addColumn.getColumns()) {
-                String name = stripIdentifier(column.getName().getSimpleName());
+                String name = StringUtils.stripQuotes(column.getName().getSimpleName());
                 String type = column.getDataType() != null ? column.getDataType().toString() : null;
                 String comment = extractComment(column);
                 info.addChange(AlterColumnChange.ofAdd(name, type, comment));
             }
         } else if (item instanceof SQLAlterTableDropColumnItem dropColumn) {
             for (SQLName name : dropColumn.getColumns()) {
-                info.addChange(AlterColumnChange.ofDrop(stripIdentifier(name.getSimpleName())));
+                info.addChange(AlterColumnChange.ofDrop(StringUtils.stripQuotes(name.getSimpleName())));
             }
         } else if (item instanceof SQLAlterTableRenameColumn rename) {
-            String oldName = stripIdentifier(rename.getColumn().getSimpleName());
-            String newName = stripIdentifier(rename.getTo().getSimpleName());
+            String oldName = StringUtils.stripQuotes(rename.getColumn().getSimpleName());
+            String newName = StringUtils.stripQuotes(rename.getTo().getSimpleName());
             info.addChange(AlterColumnChange.ofRename(oldName, newName));
         } else if (item instanceof SQLAlterTableAlterColumn alterColumn
                 && alterColumn.getColumn() != null) {
             SQLColumnDefinition column = alterColumn.getColumn();
             String oldName = alterColumn.getOriginColumn() == null
                     ? null
-                    : stripIdentifier(alterColumn.getOriginColumn().getSimpleName());
-            String newName = stripIdentifier(column.getName().getSimpleName());
+                    : StringUtils.stripQuotes(alterColumn.getOriginColumn().getSimpleName());
+            String newName = StringUtils.stripQuotes(column.getName().getSimpleName());
             String type = column.getDataType() == null ? null : column.getDataType().toString();
             boolean renamed = oldName != null && !oldName.equals(newName);
 
@@ -100,7 +101,7 @@ public final class SqlAlterTableParser {
                 && modifyColumn.getNewColumnDefinition() != null) {
             SQLColumnDefinition column = modifyColumn.getNewColumnDefinition();
             info.addChange(AlterColumnChange.ofModify(
-                    stripIdentifier(column.getName().getSimpleName()),
+                    StringUtils.stripQuotes(column.getName().getSimpleName()),
                     null,
                     column.getDataType() == null ? null : column.getDataType().toString(),
                     extractComment(column)
@@ -117,17 +118,4 @@ public final class SqlAlterTableParser {
         return column.getComment() != null ? column.getComment().toString() : null;
     }
 
-    private static String stripIdentifier(String raw) {
-        if (raw == null) {
-            return null;
-        }
-        if (raw.length() >= 2) {
-            char first = raw.charAt(0);
-            char last = raw.charAt(raw.length() - 1);
-            if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-                return raw.substring(1, raw.length() - 1);
-            }
-        }
-        return raw;
-    }
 }

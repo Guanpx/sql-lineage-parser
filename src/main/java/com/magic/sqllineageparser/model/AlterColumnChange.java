@@ -9,7 +9,7 @@ import lombok.Setter;
  * 描述一次列级别的结构变更（新增 / 删除 / 重命名 / 修改）
  *
  * @author Guan Peixiang
- * @since 2026/05/19
+ * @since 2023/12/22
  */
 @Setter
 @Getter

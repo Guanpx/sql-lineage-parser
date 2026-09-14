@@ -25,8 +25,6 @@ public class GraphDbConfig {
         this.password = password;
     }
 
-    // Getters and Setters
-
     public String getHost() {
         return host;
     }

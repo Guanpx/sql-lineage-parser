@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  * 内嵌方法表达式的参数是源列，输出列别名进入上层 SELECT。
  *
  * @author Guan Peixiang
- * @since 2026/05/19
+ * @since 2023/9/13
  */
 public final class SqlLateralViewTableSourceParser implements BaseTableSourceParser {
 

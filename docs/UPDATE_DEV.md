@@ -1,5 +1,107 @@
 # UPDATE_DEV.md - 变更记录
 
+## 2026-09-14 去 AI 味代码整理（不改变功能）
+
+### 操作背景
+
+代码库 2026-02 从 Scala 迁到 Java，`335ed47 "init for cc-opus47"`（2026-05-25，25 文件 +2361/−414）起开始大规模 AI 辅助重写，混入一批机械同构样板：17 个 parser 类共 787 行中约 66% 是同构骨架，业务逻辑仅占 15%。
+
+本次按「只去 AI 痕迹、严格保留作者原生风格」的原则整理。**判定靠 git 溯源而非手感**（`git log -S` / `git show <首个提交>:<path>` 逐项核实），结果推翻了初审的三处误判：
+
+| 初审判断 | 核实结果 | 处置 |
+|---|---|---|
+| `process()` + 单例是 AI 样板（C-9） | `trait BaseSqlExprParser { def process() }` 是 2023 原设计；`object Xxx { = { } }` 空实现也是原样 | **保留** |
+| `ColumnNode` 3 个字段 + `TableNode` 是重构残留（C-8） | 三者及 `TableNode` 全部来自 `7d3793d`（2023-09-13 首个提交） | **保留** |
+| `@param str 入参` 是零信息样板 | 源头是作者 `StringUtils.scala`（2023-12-19）原文 | **保留** |
+
+另更正：Java 代码里没有 `！！！` 感叹号（那在作者手写的 Scala 里，如 `！！！暂不支持未列出类型！！！`，属其个人风格）；4 处 `XXX 解析完成: ` 汇总日志同样源自 Scala 的 `println("聚合aggregate 解析完成！！！")`，**保留**。
+
+### 改动内容（26 文件，+19 / −227）
+
+- **删模板方法 Javadoc**：11 个 expr parser + `BaseSqlExprParser` 的 `parse()`/`parserSqlExpr()`，以及 `BaseTableSourceParser.process()` —— 这些是逐字复制的 `@param expr Xxx表达式` + `@param context 解析上下文` 模板
+- **删复述型行内注释**：`// 常量值` ×3、`// 递归解析函数参数` ×2、`// 解析各个 WHEN 分支` 等约 15 条
+- **去营销腔**：`使用 Java 17 sealed interface 限制实现类，提供更好的类型安全`（×2）；`@deprecated` 的劝导语气压成一行
+- **删装饰性分隔**：2 个 repository 的 `// ====== xxx ======` 分隔条 ×14、4 个实体的 `// Getters and Setters`
+- **`stripIdentifier` ×5 去重**：`SqlInsertParser` / `SqlCreateTableAsParser` / `SqlCreateTableParser` / `SqlCreateViewParser` / `SqlAlterTableParser` 的本地副本删除，统一改调已有的 `StringUtils.stripQuotes`（行为等价：null 与长度判断一致）。顺带删掉已完成使命的 `TODO 方法重复`
+- **`DmlLineageInfo`**：删 `toString()` 里未使用的局部变量 `columnsPart` 与被取代的旧实现注释块
+
+### 未做
+
+计划中的**局部变量改名（原 E 项）经复核后取消**。数据驱动核查：主代码中 ≥18 字符的标识符全是 API 调用与字段，没有可精简的冗长局部变量；而计划里点名的 `aliasOrTableName`、`columnSources`（与 `@param` 同步）、`template`、`realSources` 等，替换后反而**丢失语义**。依「不做无实质收益的改动」原则放弃。
+
+同样未做：任何缺陷修复（P2-2 / P2-3 / P2-4 / P3-5 / P3-6 / P4-1）、`src/test` 改动、公开 API 改名。
+
+### 执行中的两处事故（均已修复）
+
+1. `SqlLineageParser.java:361` 出现非本次操作所致的 Javadoc 缩进破坏（`     *` → `*`），已复原，该文件最终 diff 为空。
+2. 首轮用 Python 脚本删分隔条时按 `\n` 读写，把 7 个 persistence 文件的 **CRLF 行尾全转成 LF**，diff 从 18 行炸到 +1012/−1220。已 `git checkout` 回滚后改用按字节、保留原行尾的方式重做。
+
+### 验证（改动前后三份快照，全部逐字节一致）
+
+| 快照 | 内容 | 结果 |
+|------|------|------|
+| 测试 | `mvn clean test` | 89 用例，0 失败 0 错误 |
+| 行为 | 30 个 SQL（`sqls/**` 23 + `known-issues/sql/` 7）× 4 个入口，递归展开 727 行 | 完全一致 |
+| 日志 | stderr 去时间戳归一化后 21 类消息及频次 | 完全一致 |
+| 公开 API | 46 个类的 `javap`（不含 `-p`）555 行 | 完全一致 |
+
+另做全库行尾 churn 体检：`git diff` 与 `git diff --ignore-cr-at-eol` 指纹一致，26 个 CRLF 文件行尾逐一致校验通过。
+
+---
+
+## 2026-09-14 代码审查归档 + 已知问题清单精简与合并
+
+### 操作背景
+
+对 `src/main/java` 全部 41 个类做了一次完整审查（含探针实测），随后精简 `KNOWN_ISSUES.md`（删除已解决与已证伪条目），并把审查发现的**缺陷类**问题合并进该清单，形成单一修复台账。
+
+### 新增
+
+```
+known-issues/CODE_REVIEW_2026-09-14.md              # 审查过程记录（清理类条目 + 实测数据 + 未列为问题的判定依据）
+known-issues/sql/issue-p2-02-column-name-paren-leak.sql
+known-issues/sql/issue-p3-05-char-literal-escape.sql
+```
+
+### `KNOWN_ISSUES.md` 精简（175 行 → 105 行）
+
+删除条目：
+
+| 编号 | 原因 |
+|------|------|
+| P2-2 | 随 TreeNode 类删除已消除（2026-08-27） |
+| P2-3 | 随 TreeNode 类删除已消除（2026-08-27） |
+| P3-5 | 2026-09-14 实测证伪，无复现 SQL |
+
+同时删除孤儿复现文件 `known-issues/sql/issue-p2-02-treenode-id-subtreesize.sql`，并修正 P3-2 中"含括号表达式返回 null"的表述（`SUM(t.amount)` 实际返回脏名，交叉引用 P2-2）。
+
+### `KNOWN_ISSUES.md` 合并（105 行 → 11 条）
+
+审查发现中判定为**缺陷**的 6 条并入，续编号；原 P2-2 / P2-3 / P3-5 的编号已重新分配：
+
+| 审查编号 | 级别 | 问题 | 新编号 |
+|----------|------|------|--------|
+| C-1 | BLOCKER | 列名提取泄漏右括号，血缘静默丢失 | **P2-2** |
+| C-2 | IMPORTANT | 持久化 ID 用 `String.hashCode()`，碰撞即静默合并 | **P2-3** |
+| C-3 | IMPORTANT | 图库语句字符串拼接 + 未连接时静默"成功" | **P2-4** |
+| C-10 | SUGGESTION | 常量字面量重建破坏转义 | **P3-5** |
+| C-12 | SUGGESTION | 建图去重用 `List.contains`，O(n²) | **P3-6** |
+| C-13 | SUGGESTION | 热路径 WARNING 日志（`SELECT *` / `NULL`） | **P4-1** |
+
+清单补充分级说明（P2 正确性/数据安全、P3 边界与性能、P4 运维体验），并标注条目来源（首轮审查 / 本轮复审）。
+
+审查发现中判定为**纯代码清理**的 6 条（C-5 scala 死代码、C-6 空壳包与弱测试、C-7 `stripIdentifier` ×5、C-8 死字段、C-9 空壳接口成员、C-11 `toString` 死变量）**不进缺陷清单**，留在 `CODE_REVIEW_2026-09-14.md`，避免清理项与缺陷混在一起。
+
+`CODE_REVIEW_2026-09-14.md` 相应改造：新增「归并对照表」记录 C-n → P-n 映射，已并出条目的正文移除（避免两处重复维护），保留审查过程、实测数据与「未列为问题」的判定依据。
+
+### 说明
+
+- 本次**未改动任何生产代码**，`mvn test` 基线仍为 89 用例全绿。
+- `known-issues/` 已不入库，上述改动仅存在于本地工作区。
+- **C-1（现 P2-2）是当前清单中唯一 BLOCKER 级问题**，位于 `SqlLineageParser#visibleColumnName` 与 `DmlLineageInfo#extractNameFromExpression` 两处重复实现，与 C-7 在同一批文件，建议一并修。
+
+---
+
 ## 2026-09-14 文档归入 docs/，sqls 与 known-issues 移出版本库
 
 ### 操作背景

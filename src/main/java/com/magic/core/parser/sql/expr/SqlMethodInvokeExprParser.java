@@ -23,16 +23,9 @@ public final class SqlMethodInvokeExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析函数调用表达式，收集结果到上下文
-     *
-     * @param expr    函数调用表达式
-     * @param context 解析上下文
-     */
     public static void parse(SQLMethodInvokeExpr expr, ExprParseContext context) {
         LOGGER.fine(() -> "函数调用: " + expr.getMethodName());
 
-        // 递归解析函数参数
         for (SQLExpr arg : expr.getArguments()) {
             BaseSqlExprParser.parserSqlExpr(arg, context);
         }

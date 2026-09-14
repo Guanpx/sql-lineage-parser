@@ -9,7 +9,7 @@ import lombok.Setter;
  * 此元数据用于数据地图展示，也同样在图谱中保存孤立节点
  *
  * @author Guan Peixiang
- * @since 2026/08/26
+ * @since 2023/12/22
  */
 @Setter
 @Getter

@@ -62,8 +62,6 @@ public class LineageEdge {
         this.createTime = System.currentTimeMillis();
     }
 
-    // Getters and Setters
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

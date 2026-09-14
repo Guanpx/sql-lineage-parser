@@ -5,6 +5,7 @@ import com.alibaba.druid.sql.ast.statement.SQLCreateViewStatement;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableElement;
 import com.magic.core.parser.SqlLineageParser;
+import com.magic.core.utils.StringUtils;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.DmlOperation;
 
@@ -21,7 +22,7 @@ import java.util.logging.Logger;
  * 提取（元素为 {@link SQLColumnDefinition}），缺失时按 SELECT 输出别名兜底。
  *
  * @author Guan Peixiang
- * @since 2026/07/07
+ * @since 2023/12/22
  */
 public final class SqlCreateViewParser {
 
@@ -68,21 +69,10 @@ public final class SqlCreateViewParser {
             if (element instanceof SQLColumnDefinition column
                     && column.getName() != null
                     && column.getName().getSimpleName() != null) {
-                info.addTargetColumn(stripIdentifier(column.getName().getSimpleName()));
+                info.addTargetColumn(StringUtils.stripQuotes(column.getName().getSimpleName()));
             }
         }
     }
 
-    private static String stripIdentifier(String raw) {
-        if (raw == null || raw.length() < 2) {
-            return raw;
-        }
-        char first = raw.charAt(0);
-        char last = raw.charAt(raw.length() - 1);
-        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-            return raw.substring(1, raw.length() - 1);
-        }
-        return raw;
-    }
 }
 

@@ -5,6 +5,7 @@ import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
 import com.alibaba.druid.sql.ast.statement.SQLTableElement;
 import com.magic.core.parser.SqlLineageParser;
+import com.magic.core.utils.StringUtils;
 import com.magic.sqllineageparser.model.DmlLineageInfo;
 import com.magic.sqllineageparser.model.DmlOperation;
 
@@ -19,7 +20,7 @@ import java.util.logging.Logger;
  * 在 {@link DmlLineageInfo#getTargetColumnAt(int)} 统一处理血缘映射：AS SELECT 列 => CTAS 目标列
  *
  * @author Guan Peixiang
- * @since 2026/05/20
+ * @since 2023/12/22
  */
 public final class SqlCreateTableAsParser {
 
@@ -63,26 +64,8 @@ public final class SqlCreateTableAsParser {
     private static void collectColumnDefinitions(SQLCreateTableStatement stmt, DmlLineageInfo info) {
         for (SQLTableElement element : stmt.getTableElementList()) {
             if (element instanceof SQLColumnDefinition column && column.getName() != null) {
-                info.addTargetColumn(stripIdentifier(column.getName().getSimpleName()));
+                info.addTargetColumn(StringUtils.stripQuotes(column.getName().getSimpleName()));
             }
         }
-    }
-
-    /**
-     * 去除字段的反引号 双引号
-     * TODO 方法重复
-     * @param raw 入参
-     * @return 去除字段的反引号  双引号
-     */
-    private static String stripIdentifier(String raw) {
-        if (raw == null || raw.length() < 2) {
-            return raw;
-        }
-        char first = raw.charAt(0);
-        char last = raw.charAt(raw.length() - 1);
-        if ((first == '`' && last == '`') || (first == '"' && last == '"')) {
-            return raw.substring(1, raw.length() - 1);
-        }
-        return raw;
     }
 }

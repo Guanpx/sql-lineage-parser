@@ -33,7 +33,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * SQL血缘解析入口
+ * SQL血缘解析总入口
+ * TODO 拆分入口
  *
  * @author Guan Peixiang
  * @since 2023/12/19
@@ -47,7 +48,7 @@ public final class SqlLineageParser {
 
     /**
      * 解析单个 SELECT SQL 语句
-     * <p>支持: SELECT 查询块、UNION/INTERSECT/EXCEPT、WITH (CTE)
+     * 支持: SELECT 查询块、UNION/INTERSECT/EXCEPT、WITH (CTE)
      *
      * @param sql SQL语句
      * @return 输出列列表（每列的 sourceColumns 为其来源列），解析失败返回 null

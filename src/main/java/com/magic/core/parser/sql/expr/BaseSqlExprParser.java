@@ -8,8 +8,6 @@ import java.util.logging.Logger;
 
 /**
  * SQL表达式解析器基础接口 (密封接口)
- * <p>
- * 使用 Java 17 sealed interface 限制实现类
  *
  * @author Guan Peixiang
  * @since 2023/12/20
@@ -34,14 +32,6 @@ public sealed interface BaseSqlExprParser
      */
     void process();
 
-    /**
-     * 解析 SQL 表达式（分发到具体解析器，带上下文）
-     * <p>
-     * 解析结果会被收集到 context 中
-     *
-     * @param sqlExpr SQL 表达式
-     * @param context 解析上下文
-     */
     static void parserSqlExpr(SQLExpr sqlExpr, ExprParseContext context) {
         if (sqlExpr == null) {
             LOGGER.warning("表达式为空");
@@ -76,10 +66,7 @@ public sealed interface BaseSqlExprParser
     }
 
     /**
-     * 解析 SQL 表达式（无上下文版本，仅日志输出）
-     *
-     * @param sqlExpr SQL 表达式
-     * @deprecated 建议使用带 context 的版本以收集解析结果
+     * @deprecated 改用带 context 的版本，否则收集不到解析结果
      */
     @Deprecated
     static void parserSqlExpr(SQLExpr sqlExpr) {

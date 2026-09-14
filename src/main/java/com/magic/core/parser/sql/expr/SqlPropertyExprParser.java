@@ -22,12 +22,6 @@ public final class SqlPropertyExprParser implements BaseSqlExprParser {
         return INSTANCE;
     }
 
-    /**
-     * 解析属性表达式，收集结果到上下文
-     *
-     * @param expr    属性表达式
-     * @param context 解析上下文
-     */
     public static void parse(SQLPropertyExpr expr, ExprParseContext context) {
         String ownerName = expr.getOwnerName();
         String columnName = expr.getName();

@@ -39,8 +39,6 @@ public class Neo4jLineageRepository implements LineageRepository {
         this.config = config;
     }
 
-    // ==================== 连接管理 ====================
-
     @Override
     public void connect() {
         LOGGER.info(() -> "Neo4j 连接初始化: " + config);
@@ -67,8 +65,6 @@ public class Neo4jLineageRepository implements LineageRepository {
     public boolean isConnected() {
         return connected;
     }
-
-    // ==================== 节点操作 ====================
 
     @Override
     public void saveNode(LineageNode node) {
@@ -108,8 +104,6 @@ public class Neo4jLineageRepository implements LineageRepository {
         executeCypher(cypher);
     }
 
-    // ==================== 边操作 ====================
-
     @Override
     public void saveEdge(LineageEdge edge) {
         String cypher = buildMergeEdgeCypher(edge);
@@ -141,8 +135,6 @@ public class Neo4jLineageRepository implements LineageRepository {
         return Collections.emptyList();
     }
 
-    // ==================== 图操作 ====================
-
     @Override
     public void saveGraph(LineageGraph graph) {
         LOGGER.info(() -> "保存血缘图到 Neo4j: " + graph);
@@ -156,8 +148,6 @@ public class Neo4jLineageRepository implements LineageRepository {
         LOGGER.fine(() -> "清除血缘 Cypher: " + cypher);
         executeCypher(cypher);
     }
-
-    // ==================== 内部方法 ====================
 
     /**
      * 构建 MERGE 节点的 Cypher 语句

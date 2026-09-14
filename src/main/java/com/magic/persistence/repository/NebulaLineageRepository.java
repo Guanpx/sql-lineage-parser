@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  * 注意: 实际的 Nebula Client 连接和执行方法已预留，待引入 nebula-java 依赖后实现
  *
  * @author Guan Peixiang
- * @since 2023/12/20
+ * @since 2024/11/14
  */
 public class NebulaLineageRepository implements LineageRepository {
 
@@ -40,8 +40,6 @@ public class NebulaLineageRepository implements LineageRepository {
     public NebulaLineageRepository(GraphDbConfig config) {
         this.config = config;
     }
-
-    // ==================== 连接管理 ====================
 
     @Override
     public void connect() {
@@ -71,8 +69,6 @@ public class NebulaLineageRepository implements LineageRepository {
     public boolean isConnected() {
         return connected;
     }
-
-    // ==================== 节点操作 ====================
 
     @Override
     public void saveNode(LineageNode node) {
@@ -118,8 +114,6 @@ public class NebulaLineageRepository implements LineageRepository {
         executeNgql(ngql);
     }
 
-    // ==================== 边操作 ====================
-
     @Override
     public void saveEdge(LineageEdge edge) {
         String ngql = buildInsertEdgeNgql(edge);
@@ -159,8 +153,6 @@ public class NebulaLineageRepository implements LineageRepository {
         return Collections.emptyList();
     }
 
-    // ==================== 图操作 ====================
-
     @Override
     public void saveGraph(LineageGraph graph) {
         LOGGER.info(() -> "保存血缘图到 Nebula: " + graph);
@@ -176,8 +168,6 @@ public class NebulaLineageRepository implements LineageRepository {
         LOGGER.fine(() -> "清除血缘 nGQL: " + ngql);
         executeNgql(ngql);
     }
-
-    // ==================== 内部方法 ====================
 
     /**
      * 构建 UPSERT VERTEX 的 nGQL 语句
