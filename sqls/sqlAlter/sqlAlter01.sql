@@ -1,1 +1,0 @@
-alter table fce_stock.dest_test_2 ADD COLUMNS (first_code string   COMMENT  '首code' );

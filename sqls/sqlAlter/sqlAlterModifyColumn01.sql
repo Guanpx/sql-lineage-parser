@@ -1,2 +1,0 @@
-ALTER TABLE dw.orders
-MODIFY COLUMN amount DECIMAL(18, 2) COMMENT '订单金额'

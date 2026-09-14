@@ -49,6 +49,17 @@ mvn clean package
 mvn test
 ```
 
+### 测试用例数据依赖
+
+部分测试通过 `SqlFileReader` 读取仓库根目录下的 `sqls/` 语料（相对路径 `sqls`，即依赖 `mvn test` 的工作目录为仓库根）。
+
+`sqls/` 与 `known-issues/` 均为**本地保留、不入库**的目录，因此：
+
+- 在本机（`sqls/` 存在）`mvn test` 全绿；
+- 在全新 clone 的仓库上，依赖 SQL 文件的用例会因找不到文件而失败。
+
+如需让测试在干净仓库上可运行，可将 `sqls/` 语料改为测试资源（`src/test/resources/sqls/`）或让 `SqlFileReader` 在文件缺失时跳过用例。
+
 ### 基础使用
 
 #### 1. SELECT 血缘解析
@@ -257,7 +268,13 @@ sql-lineage-parser/
 │       ├── DmlLineageInfo.java                 # DML/DDL 血缘解析结果（INSERT / CTAS / CREATE VIEW）
 │       └── DmlOperation.java                   # DML 操作类型枚举
 ├── src/test/                                   # 测试代码
-├── sqls/                                       # SQL 测试用例库
+├── docs/                                       # 项目文档
+│   ├── README.md                               # 本文档
+│   ├── AGENTS.md                               # 开发约定（Java 17 / 文档维护规则）
+│   ├── RELEASE.md                              # 版本规划文档
+│   └── UPDATE_DEV.md                           # 开发操作记录
+├── pom.xml
+├── sqls/                                       # SQL 测试用例库（仅本地保留，不入库）
 │   ├── sqlAlter/                               # ALTER 语句
 │   ├── sqlCase/                                # CASE WHEN 语句
 │   ├── sqlCtas/                                # CTAS 语句
@@ -269,10 +286,11 @@ sql-lineage-parser/
 │   ├── sqlSelect/                              # CTE 等 SELECT 用例
 │   ├── sqlUnion/                               # UNION 语句
 │   └── sqlView/                                # CREATE VIEW 语句
-├── RELEASE.md                                  # 版本规划文档
-├── UPDATE_DEV.md                               # 开发操作记录
-└── pom.xml
+└── known-issues/                               # 已知问题清单 + 复现 SQL（仅本地保留，不入库）
 ```
+
+> `sqls/` 与 `known-issues/` 已在 `.gitignore` 中排除，仅存在于本地工作区。
+> 因此 `SqlFileReader` 依赖 `sqls/` 的用例在全新 clone 的仓库上会读取失败（见下文「测试用例数据依赖」）。
 
 ## 核心模块
 

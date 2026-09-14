@@ -1,5 +1,50 @@
 # UPDATE_DEV.md - 变更记录
 
+## 2026-09-14 文档归入 docs/，sqls 与 known-issues 移出版本库
+
+### 操作背景
+
+仓库根目录散落 4 个 Markdown 文档，且 `sqls/`（SQL 语料）与 `known-issues/`（问题清单 + 复现 SQL）属于本地开发资料，不适合入库。经确认后统一整理。
+
+### 变更内容
+
+**文档迁移（`git mv`，保留历史）：**
+
+| 变更前 | 变更后 |
+|--------|--------|
+| `README.md` | `docs/README.md` |
+| `AGENTS.md` | `docs/AGENTS.md` |
+| `RELEASE.md` | `docs/RELEASE.md` |
+| `UPDATE_DEV.md` | `docs/UPDATE_DEV.md` |
+
+**退出 git 跟踪（`git rm -r --cached`，本地文件保留）：**
+
+```
+sqls/           # 23 个 SQL 用例文件
+known-issues/   # KNOWN_ISSUES.md + 6 个复现 SQL
+```
+
+`.gitignore` 新增：
+
+```
+### 仅本地保留，不入库 ###
+sqls/
+known-issues/
+```
+
+**文档同步：**
+
+- `docs/README.md`「项目结构」树改为反映 `docs/` 布局，`sqls/` 与 `known-issues/` 标注为不入库；
+- `docs/README.md` 新增「测试用例数据依赖」小节，说明 `SqlFileReader` 依赖本地 `sqls/` 的影响。
+
+### 影响与遗留
+
+- **测试数据依赖**：`SqlFileReader.SQL_BASE_PATH = "sqls"`，读的是工作目录相对路径。本机（`sqls/` 在）`mvn test` 不受影响；但全新 clone 的仓库上，依赖 SQL 语料的用例会读文件失败。彻底解决需二选一：把语料挪到 `src/test/resources/sqls/`，或让 `SqlFileReader` 在文件缺失时跳过。**本次未改代码。**
+- **AGENTS.md 自动发现失效**：`AGENTS.md` 移入 `docs/` 后，工具不再自动加载其中的开发约定（Java 17 约束、文档维护规则）。如需保留该行为，可在根目录留一份指针文件。
+- **本次为仓库整理，未改变任何解析行为**，`src/` 下代码零改动。
+
+---
+
 ## 2026-08-27 移除 TreeNode，血缘输出改为 List&lt;ColumnNode&gt;
 
 ### 背景
